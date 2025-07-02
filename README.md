@@ -2,5 +2,5 @@
 Open-source UCLA STIMscope project
 
 <p align="center">
-  <img width="400" src="https://github.com/Aharoni-Lab/STIMscope-public/Images/UCLA-STIMscope_closed_loop.jpg">
+  <img src="Images/UCLA-STIMscope_closed_loop.jpg" width="400" alt="UCLA-STIMscope closed-loop render">
 </p>
