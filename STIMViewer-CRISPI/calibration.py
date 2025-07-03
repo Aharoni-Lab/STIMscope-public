@@ -94,7 +94,7 @@ def create_custom_registration_image(width, height, line_color, fill_color):
     smiley_radius = 100
     draw_smiley_face(draw, smiley_center, smiley_radius, line_color)
     print("Saving Custom Registration Image")
-    img.save("./Assets/Generated/custom_registration_image.png")
+    img.save("../Assets/Generated/custom_registration_image.png")
 
     
 """
@@ -131,8 +131,8 @@ def decompose_homography(H):
 
 def find_homography():
     # Read images
-    img2 = cv2.imread("./Assets/Generated/custom_registration_image.png")
-    img1 = cv2.imread("./Assets/Generated/calibration_capture_image.png")
+    img2 = cv2.imread("../Assets/Generated/custom_registration_image.png")
+    img1 = cv2.imread("../Assets/Generated/calibration_capture_image.png")
 
     # Convert images to grayscale
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
@@ -215,7 +215,7 @@ def find_homography():
     # Warp the first image to align with the second image
     transformed_img = cv2.warpPerspective(img1, homography, (width, height))
     # Save the transformed image
-    cv2.imwrite('./Assets/Generated/CalibOutput.jpg', transformed_img)
+    cv2.imwrite('../Assets/Generated/CalibOutput.jpg', transformed_img)
 
     """
         # Create a 2x2 subplot layout

@@ -70,7 +70,7 @@ class Interface(QtWidgets.QMainWindow):
 
         logo = QLabel()
         logo.setAlignment(Qt.AlignCenter)
-        logo.setPixmap(QPixmap('./Assets/stimviewer-load.png'))
+        logo.setPixmap(QPixmap('../Assets/stimviewer-load.png'))
         layout.addWidget(logo)
 
         # Create horizontal layout for camera selection, projector status, and start button
@@ -576,7 +576,7 @@ class Interface(QtWidgets.QMainWindow):
     def _project_white(self):
         # TODO: Project White
         print("Projecting White:")
-        self.projection.show_image_fullscreen_on_second_monitor(cv2.imread("./Assets/Generated/solid_white_image.png"), self._camera.translation_matrix)
+        self.projection.show_image_fullscreen_on_second_monitor(cv2.imread("../Assets/Generated/solid_white_image.png"), self._camera.translation_matrix)
         "PlaceHolder"
 
 

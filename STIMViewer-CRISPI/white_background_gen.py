@@ -11,6 +11,6 @@ def makeWhite(width, height):
     image = Image.new("RGB", (width, height), white_color)
 
     # Save the image as a .png file
-    image.save("./Assets/Generated/solid_white_image.png")
+    image.save("../Assets/Generated/solid_white_image.png")
 
     Logbook.log_INFO("Image saved as solid_white_image.png")

@@ -92,8 +92,8 @@ class Camera(QObject):
         self.frame_times = deque(maxlen=120)  
         self.translation_matrix = np.eye(3)
 
-        self.asset_dir = "./Assets/Generated"
-        self.save_dir = "./Saved_Media"
+        self.asset_dir = "../Assets/Generated"
+        self.save_dir = "../Saved_Media"
         os.makedirs(self.asset_dir, exist_ok=True)
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -456,7 +456,7 @@ class Camera(QObject):
                 self.translation_matrix = homography_matrix
                 print("✅ Homography Computed Successfully!")
 
-                self._interface.on_projection_received(np.array(cv2.imread("./Assets/Generated/custom_registration_image.png")), self.translation_matrix)
+                self._interface.on_projection_received(np.array(cv2.imread("../Assets/Generated/custom_registration_image.png")), self.translation_matrix)
             except Exception as e:
                 print(f"❌ Error calculating homography: {e}")
 
@@ -464,7 +464,7 @@ class Camera(QObject):
         """Handles the entire calibration process separately from image acquisition."""
         print("Starting Calibration...")
 
-        self._interface.on_projection_received(np.array(cv2.imread("./Assets/Generated/custom_registration_image.png")))
+        self._interface.on_projection_received(np.array(cv2.imread("../Assets/Generated/custom_registration_image.png")))
         
         QTimer.singleShot(80, delayed_capture)
 
