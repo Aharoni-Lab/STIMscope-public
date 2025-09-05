@@ -39,7 +39,7 @@ TARGET_PIXEL_FORMAT = {
 }.get(_get_env_str("STIM_PIXEL_FORMAT", "BGRA8").upper(), ids_peak_ipl.PixelFormatName_BGRa8)
 
 DEFAULT_FPS       = _get_env_int("STIM_CAMERA_FPS", 60)
-DEFAULT_BUFFERS   = max(4, _get_env_int("STIM_PEAK_BUFFERS", 16))
+DEFAULT_BUFFERS   = max(4, _get_env_int("STIM_PEAK_BUFFERS", 32))
 DEFAULT_TRIG_LINE = _get_env_str("STIM_TRIGGER_LINE", "Line0")
 DEFAULT_RT_START  = _get_env_int("STIM_RT_DEFAULT", 1) == 1 
 
@@ -136,8 +136,8 @@ class OptimizedCamera(QObject):
 
 
         self.thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="CameraWorker")
-        self.recording_queue: queue.Queue = queue.Queue(maxsize=30)
-        self.save_queue: queue.Queue = queue.Queue(maxsize=10)
+        self.recording_queue: queue.Queue = queue.Queue(maxsize=60)
+        self.save_queue: queue.Queue = queue.Queue(maxsize=60)
         self.recording_worker_running = False
         self.save_worker_running = False
 
@@ -215,7 +215,7 @@ class OptimizedCamera(QObject):
 
                 if self._datastream:
                     self._datastream.Flush(ids_peak.DataStreamFlushMode_DiscardAll)
-                time.sleep(0.01) 
+                time.sleep(0.001) 
             except Exception:
                 pass
 
@@ -471,7 +471,7 @@ class OptimizedCamera(QObject):
             
             try:
 
-                time.sleep(0.1)
+                time.sleep(0.001)
                 
 
                 t0 = time.time()
@@ -485,7 +485,7 @@ class OptimizedCamera(QObject):
                         except Exception as e:
                             print(f"❌ Snapshot save failed: {e}")
                             return False
-                    time.sleep(0.01)  
+                    time.sleep(0.001)  
                 
                 print("❌ Snapshot failed: no frame captured within timeout")
                 return False
@@ -514,7 +514,7 @@ class OptimizedCamera(QObject):
                 img = self.get_data_stream_image()
                 if img is not None:
                     return img
-                time.sleep(0.02) 
+                time.sleep(0.001) 
             
             return None
             
@@ -889,7 +889,7 @@ class OptimizedCamera(QObject):
                 fps = self.get_actual_fps()
                 if fps > 0:
                     return fps
-            time.sleep(0.05)
+            time.sleep(0.005)
         return 0
 
 
@@ -958,7 +958,7 @@ class OptimizedCamera(QObject):
                 for _ in range(20):
                     latest = self.get_data_stream_image()
                     if latest is not None: break
-                    time.sleep(0.05)
+                    time.sleep(0.005)
                 if latest is None:
                     print("❌ Failed to capture image for calibration")
                     return
@@ -1099,7 +1099,7 @@ class OptimizedCamera(QObject):
 
         if buffer is None:
             if self.acquisition_mode == 1:
-                time.sleep(0.01)
+                time.sleep(0.001)
             return None
 
         try:
