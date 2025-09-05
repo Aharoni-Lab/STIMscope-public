@@ -650,22 +650,35 @@ class Interface(QtWidgets.QMainWindow):
 
 
     def _start_hardware_acquisition(self):
-        if(not self._hardware_status):
+        if not self._hardware_status:
             self._camera.stop_realtime_acquisition()
             self._camera.start_hardware_acquisition()
+            
+            try:
+                node_map = self._camera.node_map
+                mode_node = node_map.FindNode("TriggerMode")
+                source_node = node_map.FindNode("TriggerSource")
+                act_node = node_map.FindNode("TriggerActivation")
+                
+                print("TriggerMode =", mode_node.CurrentEntry().SymbolicValue() if mode_node else "None")
+                print("TriggerSource =", source_node.CurrentEntry().SymbolicValue() if source_node else "None")
+                print("TriggerActivation =", act_node.CurrentEntry().SymbolicValue() if act_node else "None")
+            except Exception as e:
+                print(f"Failed to read trigger nodes: {e}")
+
             self._dropdown_trigger_line.setEnabled(False)
             self.acq_label.setText("Acquisition Mode: Hardware")
-
             self._button_start_hardware_acquisition.setText("Stop Hardware Acquisition")
         else:
             self._camera.stop_hardware_acquisition()
             self._camera.start_realtime_acquisition()
             self.acq_label.setText("Acquisition Mode: RealTime")
-
             self._button_start_hardware_acquisition.setText("Start Hardware Acquisition")
             if not self._recording_status:
                 self._dropdown_trigger_line.setEnabled(True)
+
         self._hardware_status = not self._hardware_status
+
 
     def _start_recording(self):
         try:

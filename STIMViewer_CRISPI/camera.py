@@ -228,6 +228,7 @@ class OptimizedCamera(QObject):
                     self.start_realtime_acquisition()
                 else:
                     self.start_hardware_acquisition()
+                    
             if was_recording and getattr(self, "video_recorder", None):
                 self.start_recording() 
         except Exception:
@@ -731,19 +732,27 @@ class OptimizedCamera(QObject):
         self.acquisition_mode = 1
         self._queue_all_buffers()
         try:
-            self._select_trigger("On", self.hardware_trigger_line)
+            self._select_trigger("On", "Software")
+
             try:
                 self.node_map.FindNode("TLParamsLocked").SetValue(1)
             except Exception:
                 pass
+
             self._datastream.StartAcquisition()
             self.node_map.FindNode("AcquisitionStart").Execute()
             self.acquisition_running = True
-            print("Hardware Acquisition started!")
+            print("Hardware Acquisition started! (Software trigger mode)")
+            trigger_node = self.node_map.FindNode("TriggerSoftware")
+            trigger_node.Execute()
+            print("📸 Fired first software trigger")
+
             return True
         except Exception as e:
             print(f"start_hardware_acquisition failed: {e}")
             return False
+
+
 
     def stop_hardware_acquisition(self):
         if self._device is None or not self.acquisition_running or self.acquisition_mode != 1:
@@ -832,6 +841,21 @@ class OptimizedCamera(QObject):
         except Exception:
             return False
 
+    def _wait_for_live_fps(self, min_frames: int = 8, timeout: float = 3.0) -> int:
+        """Wait until at least `min_frames` frames arrive, then estimate FPS.
+        Returns 0 if no valid FPS can be estimated within timeout."""
+        start_count = self.frame_count
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            arrived = self.frame_count - start_count
+            if arrived >= min_frames:
+                fps = self.get_actual_fps()
+                if fps > 0:
+                    return fps
+            time.sleep(0.05)
+        return 0
+
+
 
     @pyqtSlot()
     @pyqtSlot(int)
@@ -841,19 +865,34 @@ class OptimizedCamera(QObject):
         if self._datastream is None:
             self._init_data_stream()
 
-        if fps is None:
-
+        # Try reading FPS directly from node (reliable in RT mode only)
+        if fps is None and self.acquisition_mode == 0:
             try:
-                if self.acquisition_mode == 0:
-                    fps = int(self.node_map.FindNode("AcquisitionFrameRate").Value())
-            except Exception:
-                fps = 0
-            if fps <= 0:
-                fps = max(1, self.get_actual_fps())
+                node = self.node_map.FindNode("AcquisitionFrameRate")
+                fps = node.Value() if node is not None else None
+            except Exception as e:
+                print(f"⚠️ Could not read AcquisitionFrameRate: {e}")
+                fps = None
 
-        self.video_recorder.start_recording(int(fps))
-        self.is_recording = True
-        self.recordingStarted.emit()
+        # In HW mode or fallback: wait for live frames to estimate fps
+        if not fps or fps <= 0:
+            print("⏳ Waiting for frames to estimate FPS...")
+            est = self._wait_for_live_fps(min_frames=8, timeout=3.0)
+            if est > 0:
+                fps = est
+                print(f"🎯 Using measured FPS ≈ {fps}")
+            else:
+                print("🛑 No frames detected. Recording aborted.")
+                return
+
+        try:
+            self.video_recorder.start_recording(int(fps))
+            self.is_recording = True
+            self.recordingStarted.emit()
+            print(f"🔴 Recording started at {fps} FPS")
+        except Exception as e:
+            print(f"❌ Failed to start recording: {e}")
+
 
 
     @pyqtSlot()
