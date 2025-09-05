@@ -732,25 +732,29 @@ class OptimizedCamera(QObject):
         self.acquisition_mode = 1
         self._queue_all_buffers()
         try:
-            self._select_trigger("On", "Software")
+            # Set trigger to external Line0
+            self._select_trigger("On", "Line0")
 
             try:
                 self.node_map.FindNode("TLParamsLocked").SetValue(1)
             except Exception:
                 pass
 
+            line_selector = self.node_map.FindNode("LineSelector")
+            line_selector.SetValue("Line0")
+            line_mode = self.node_map.FindNode("LineMode")
+            line_mode.SetValue("Input")
+            print("✅ Configured Line0 as Input for external trigger")
+
             self._datastream.StartAcquisition()
             self.node_map.FindNode("AcquisitionStart").Execute()
             self.acquisition_running = True
-            print("Hardware Acquisition started! (Software trigger mode)")
-            trigger_node = self.node_map.FindNode("TriggerSoftware")
-            trigger_node.Execute()
-            print("📸 Fired first software trigger")
-
+            print("📡 Hardware Acquisition started! (waiting for external trigger)")
             return True
         except Exception as e:
             print(f"start_hardware_acquisition failed: {e}")
             return False
+
 
 
 
