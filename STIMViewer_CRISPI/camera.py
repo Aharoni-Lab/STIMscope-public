@@ -726,34 +726,67 @@ class OptimizedCamera(QObject):
 
     def start_hardware_acquisition(self) -> bool:
         if self._device is None or self.acquisition_running:
+            print("❌ Cannot start acquisition: device missing or already running")
             return False
+
         if self._datastream is None:
             self._init_data_stream()
+
         self.acquisition_mode = 1
         self._queue_all_buffers()
-        try:
-            # Set trigger to external Line0
-            self._select_trigger("On", "Line0")
 
+        try:
+            # --- 1. Select trigger ---
+            self._select_trigger("On", "Line0")  # TriggerMode = On, TriggerSource = Line0
+
+            # --- 2. Lock parameters ---
             try:
                 self.node_map.FindNode("TLParamsLocked").SetValue(1)
             except Exception:
-                pass
+                print("⚠️ TLParamsLocked not writable, proceeding anyway")
 
-            line_selector = self.node_map.FindNode("LineSelector")
-            line_selector.SetValue("Line0")
-            line_mode = self.node_map.FindNode("LineMode")
-            line_mode.SetValue("Input")
-            print("✅ Configured Line0 as Input for external trigger")
+            # --- 3. Configure Line0 for input ---
+            line_selector_node = self.node_map.FindNode("LineSelector")
+            if line_selector_node and line_selector_node.AccessStatus() == ids_peak.NodeAccessStatus_ReadWrite:
+                entry = line_selector_node.FindEntry("Line0")
+                if entry:
+                    line_selector_node.SetCurrentEntry(entry)
+                else:
+                    print("⚠️ Line0 not found in LineSelector")
+            else:
+                print(f"⚠️ LineSelector node not writable or missing: {line_selector_node}")
 
+            line_mode_node = self.node_map.FindNode("LineMode")
+            if line_mode_node and line_mode_node.AccessStatus() == ids_peak.NodeAccessStatus_ReadWrite:
+                entry = line_mode_node.FindEntry("Input")
+                if entry:
+                    line_mode_node.SetCurrentEntry(entry)
+                    print("✅ Line0 configured as Input for external trigger")
+                else:
+                    print("⚠️ 'Input' entry not found in LineMode")
+            else:
+                print(f"⚠️ LineMode node not writable or missing: {line_mode_node}")
+
+            # --- 4. Start datastream and acquisition ---
             self._datastream.StartAcquisition()
-            self.node_map.FindNode("AcquisitionStart").Execute()
+
+            acq_start_node = self.node_map.FindNode("AcquisitionStart")
+            if acq_start_node:
+                try:
+                    acq_start_node.Execute()
+                except Exception as e:
+                    print(f"⚠️ Failed to execute AcquisitionStart: {e}")
+
             self.acquisition_running = True
-            print("📡 Hardware Acquisition started! (waiting for external trigger)")
+            print("📡 Hardware Acquisition started! Waiting for external trigger on Line0")
             return True
+
         except Exception as e:
-            print(f"start_hardware_acquisition failed: {e}")
+            print(f"❌ start_hardware_acquisition failed: {e}")
             return False
+
+
+
 
 
 
