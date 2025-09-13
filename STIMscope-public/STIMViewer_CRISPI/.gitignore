@@ -1,0 +1,17 @@
+Saved_Media/
+backups/
+benchmarks/
+logs/
+__pycache__/
+*.npy
+*.npz
+*.code-workspace
+stimviewer/utils/
+*.png
+*.json
+*.html
+*.__pycache__
+*.jpg
+*.cpython-310.pyc
+Assets/
+stimviewer/

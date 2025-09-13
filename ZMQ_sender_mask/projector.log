@@ -1,0 +1,2198 @@
+[CLI ] bad integer for latency-frames value '', using 1
+[CLI ] bad integer for cam-ts-offset-us value '', using 0
+[CLI ] proj /dev/gpiochip1:9 rising , cam /dev/gpiochip1:8 rising , L=1 , bind=tcp://*:5558 , swap-interval=1 , monitor-index=1 , visible-id=1 , overlay-style=digits , overlay-cell=32 , overlay-pos=220,180 , overlay-bg=1 , overlay-bottom=mask , cam-ts-offset-us=0 , map-eps-us=16667 , map-csv=mask_map.csv
+[PROJ] armed at 1903338567985312 ns on /dev/gpiochip1:9 edge=rising
+[CAM ] armed on /dev/gpiochip1:8 edge=rising
+Listening on tcp://*:5558
+Using monitor at +1920+0 (1920x1080@60Hz)
+[TRIG] Hardware trigger system started at projector frame 0
+[PROJ] trig #1 @1903372141971378 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #2 @1903372158652788 ns -> visible_id=-1 | (no ready id; L=1)
+[MAP ] writing to mask_map.csv
+[CAM ] frame #1 @1903372158664404 ns -> PROJ #2 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #3 @1903372175335477 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #4 @1903372192022391 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #2 @1903372192033239 ns -> PROJ #4 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #5 @1903372208703961 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #6 @1903372225388187 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #3 @1903372225399419 ns -> PROJ #6 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #7 @1903372242070717 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #8 @1903372258756670 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #4 @1903372258768575 ns -> PROJ #8 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #9 @1903372275437856 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #10 @1903372292127458 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #5 @1903372292139970 ns -> PROJ #10 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #11 @1903372308807620 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #12 @1903372325492326 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #6 @1903372325503142 ns -> PROJ #12 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #13 @1903372342174503 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #7 @1903372342185863 ns -> PROJ #13 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #14 @1903372358859753 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #8 @1903372358871017 ns -> PROJ #14 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #15 @1903372375540651 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #16 @1903372392228237 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #9 @1903372392240525 ns -> PROJ #16 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #17 @1903372408908686 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #18 @1903372425594288 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #10 @1903372425605232 ns -> PROJ #18 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #19 @1903372442278162 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #20 @1903372458961332 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #11 @1903372458972276 ns -> PROJ #20 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #21 @1903372475647286 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #22 @1903372492331447 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #12 @1903372492342360 ns -> PROJ #22 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #23 @1903372509014201 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #24 @1903372525695419 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #13 @1903372525707291 ns -> PROJ #24 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #25 @1903372542379709 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #26 @1903372559065919 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #14 @1903372559081183 ns -> PROJ #26 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #27 @1903372575747584 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #28 @1903372592433634 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #15 @1903372592445218 ns -> PROJ #28 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #29 @1903372609116868 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #30 @1903372625798694 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #16 @1903372625808966 ns -> PROJ #30 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #31 @1903372642481479 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #32 @1903372659165545 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #17 @1903372659176457 ns -> PROJ #32 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #33 @1903372675852203 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #34 @1903372692535533 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #18 @1903372692545485 ns -> PROJ #34 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #35 @1903372709218767 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #36 @1903372725901168 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #19 @1903372725911665 ns -> PROJ #36 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #37 @1903372742585170 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #38 @1903372759268340 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #20 @1903372759280084 ns -> PROJ #38 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #39 @1903372775952726 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #40 @1903372792638584 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #21 @1903372792649560 ns -> PROJ #40 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #41 @1903372809319033 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #42 @1903372826005467 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #22 @1903372826016123 ns -> PROJ #42 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #43 @1903372842688445 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #44 @1903372859540609 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #23 @1903372859536417 ns -> PROJ #44 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #45 @1903372876056865 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #46 @1903372892739490 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #24 @1903372892750402 ns -> PROJ #46 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #47 @1903372909423556 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #48 @1903372926108550 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #25 @1903372926119558 ns -> PROJ #48 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #49 @1903372942792776 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #50 @1903372959474505 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #26 @1903372959487466 ns -> PROJ #50 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #51 @1903372976161643 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #52 @1903372992844557 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #27 @1903372992855309 ns -> PROJ #52 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #53 @1903373009527759 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #54 @1903373026208529 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #28 @1903373026219377 ns -> PROJ #54 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #55 @1903373042895826 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #56 @1903373059579540 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #29 @1903373059591412 ns -> PROJ #56 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #57 @1903373076262678 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #58 @1903373092945688 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #30 @1903373092957080 ns -> PROJ #58 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #59 @1903373109629594 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #60 @1903373126312635 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #31 @1903373126324444 ns -> PROJ #60 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #61 @1903373142998173 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #32 @1903373159692543 ns -> PROJ #61 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #62 @1903373159681439 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #63 @1903373176363777 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #64 @1903373193048099 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #33 @1903373193059267 ns -> PROJ #64 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #65 @1903373209731268 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #66 @1903373226415558 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #34 @1903373226427110 ns -> PROJ #66 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #67 @1903373243099400 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #68 @1903373259784074 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #35 @1903373259795850 ns -> PROJ #68 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #69 @1903373276466603 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #70 @1903373293151853 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #36 @1903373293163533 ns -> PROJ #70 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #71 @1903373309835375 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #72 @1903373326519665 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #37 @1903373326530929 ns -> PROJ #72 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #73 @1903373343200979 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #74 @1903373359887060 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #38 @1903373359899349 ns -> PROJ #74 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #75 @1903373376570198 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #76 @1903373393253816 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #39 @1903373393265624 ns -> PROJ #76 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #77 @1903373409937914 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #78 @1903373426621500 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #40 @1903373426632860 ns -> PROJ #78 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #79 @1903373443305565 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #80 @1903373459990367 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #41 @1903373460001311 ns -> PROJ #80 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #81 @1903373476672929 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #82 @1903373493356515 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #42 @1903373493367683 ns -> PROJ #82 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #83 @1903373510040485 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #84 @1903373526723846 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #43 @1903373526738726 ns -> PROJ #84 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #85 @1903373543408040 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #86 @1903373560091018 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #44 @1903373560102666 ns -> PROJ #86 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #87 @1903373576775820 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #88 @1903373593459309 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #45 @1903373593471310 ns -> PROJ #88 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #89 @1903373610143343 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #90 @1903373626826385 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #46 @1903373626838321 ns -> PROJ #90 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #91 @1903373643511411 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #92 @1903373660193557 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #47 @1903373660205013 ns -> PROJ #92 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #93 @1903373676876950 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #94 @1903373693562392 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #48 @1903373693573208 ns -> PROJ #94 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #95 @1903373710245626 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #96 @1903373726929468 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #49 @1903373726940860 ns -> PROJ #96 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #97 @1903373743612766 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #98 @1903373760294079 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #50 @1903373760305791 ns -> PROJ #98 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #99 @1903373776979969 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #100 @1903373793663971 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #51 @1903373793675843 ns -> PROJ #100 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #101 @1903373810348805 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #102 @1903373827031494 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #52 @1903373827043911 ns -> PROJ #102 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #103 @1903373843712200 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #104 @1903373860398730 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #53 @1903373860410826 ns -> PROJ #104 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #105 @1903373877082252 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #106 @1903373893766350 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #54 @1903373893778990 ns -> PROJ #106 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #107 @1903373910449519 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #108 @1903373927133777 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #55 @1903373927146065 ns -> PROJ #108 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #109 @1903373943817299 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #110 @1903373960502229 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #56 @1903373960516213 ns -> PROJ #110 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #111 @1903373977185623 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #112 @1903373993868440 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #57 @1903373993880888 ns -> PROJ #112 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #113 @1903374010551930 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #114 @1903374027236444 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #58 @1903374027247932 ns -> PROJ #114 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #115 @1903374043919486 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #116 @1903374060603007 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #59 @1903374060614560 ns -> PROJ #116 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #117 @1903374077287361 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #60 @1903374077298529 ns -> PROJ #117 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #118 @1903374093972195 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #61 @1903374093984291 ns -> PROJ #118 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #119 @1903374110654341 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #120 @1903374127335655 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #62 @1903374127346439 ns -> PROJ #120 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #121 @1903374144021608 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #122 @1903374160705258 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #63 @1903374160717450 ns -> PROJ #122 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #123 @1903374177390124 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #124 @1903374194070670 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #64 @1903374194083662 ns -> PROJ #124 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #125 @1903374210754832 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #126 @1903374227438961 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #65 @1903374227450065 ns -> PROJ #126 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #127 @1903374244123795 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #128 @1903374260805845 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #66 @1903374260816597 ns -> PROJ #128 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #129 @1903374277494487 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #130 @1903374294176152 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #67 @1903374294188409 ns -> PROJ #130 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #131 @1903374310859514 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #132 @1903374327540604 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #68 @1903374327551164 ns -> PROJ #132 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #133 @1903374344226430 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #134 @1903374360908832 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #69 @1903374360919456 ns -> PROJ #134 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #135 @1903374377593441 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #136 @1903374394278051 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #70 @1903374394291875 ns -> PROJ #136 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #137 @1903374410963269 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #138 @1903374427648263 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #71 @1903374427661831 ns -> PROJ #138 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #139 @1903374444332009 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #140 @1903374461013610 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #72 @1903374461024586 ns -> PROJ #140 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #141 @1903374477701196 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #142 @1903374494381422 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #73 @1903374494394446 ns -> PROJ #142 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #143 @1903374511065904 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #144 @1903374527746513 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #74 @1903374527758418 ns -> PROJ #144 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #145 @1903374544434803 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #146 @1903374561115349 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #75 @1903374561129173 ns -> PROJ #146 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #147 @1903374577800407 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #148 @1903374594480249 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #76 @1903374594491641 ns -> PROJ #148 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #149 @1903374611168090 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #77 @1903374611183131 ns -> PROJ #149 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #150 @1903374627850140 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #78 @1903374627861276 ns -> PROJ #150 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #151 @1903374644534686 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #152 @1903374661215840 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #79 @1903374661227200 ns -> PROJ #152 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #153 @1903374677902146 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #154 @1903374694583587 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #80 @1903374694594595 ns -> PROJ #154 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #155 @1903374711268197 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #156 @1903374727951943 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #81 @1903374727962407 ns -> PROJ #156 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #157 @1903374744634057 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #158 @1903374761318090 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #82 @1903374761330123 ns -> PROJ #158 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #159 @1903374778003500 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #160 @1903374794687950 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #83 @1903374794698830 ns -> PROJ #160 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #161 @1903374811371088 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #162 @1903374828054706 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #84 @1903374828065586 ns -> PROJ #162 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #163 @1903374844737331 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #164 @1903374861419733 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #85 @1903374861431253 ns -> PROJ #164 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #165 @1903374878107191 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #166 @1903374894787033 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #86 @1903374894798521 ns -> PROJ #166 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #167 @1903374911471867 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #168 @1903374928157948 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #87 @1903374928171325 ns -> PROJ #168 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #169 @1903374944843998 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #170 @1903374961525312 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #88 @1903374961536768 ns -> PROJ #170 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #171 @1903374978210402 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #172 @1903374994893827 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #89 @1903374994906564 ns -> PROJ #172 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #173 @1903375011578117 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #174 @1903375028260647 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #90 @1903375028272935 ns -> PROJ #174 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #175 @1903375044943625 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #176 @1903375061627019 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #91 @1903375061637835 ns -> PROJ #176 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #177 @1903375078314668 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #178 @1903375094994670 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #92 @1903375095005486 ns -> PROJ #178 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #179 @1903375111676624 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #180 @1903375128360050 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #93 @1903375128370770 ns -> PROJ #180 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #181 @1903375145044436 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #182 @1903375161728885 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #94 @1903375161741141 ns -> PROJ #182 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #183 @1903375178411415 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #184 @1903375195094361 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #95 @1903375195105753 ns -> PROJ #184 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #185 @1903375211779835 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #186 @1903375228462908 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #96 @1903375228473725 ns -> PROJ #186 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #187 @1903375245146046 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #188 @1903375261830240 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #97 @1903375261841792 ns -> PROJ #188 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #189 @1903375278515426 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #190 @1903375295199140 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #98 @1903375295210148 ns -> PROJ #190 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #191 @1903375311881349 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #192 @1903375328564935 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #99 @1903375328577159 ns -> PROJ #192 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #193 @1903375345249961 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #194 @1903375361935851 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #100 @1903375361948203 ns -> PROJ #194 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #195 @1903375378619341 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #196 @1903375395302414 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #101 @1903375395312750 ns -> PROJ #196 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #197 @1903375411984304 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #198 @1903375428668914 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #102 @1903375428679986 ns -> PROJ #198 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #199 @1903375445353652 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #200 @1903375462037365 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #103 @1903375462048118 ns -> PROJ #200 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #201 @1903375478718711 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #202 @1903375495404633 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #104 @1903375495415577 ns -> PROJ #202 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #203 @1903375512087003 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #204 @1903375528773661 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #105 @1903375528785949 ns -> PROJ #204 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #205 @1903375545455582 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #206 @1903375562138880 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #106 @1903375562151808 ns -> PROJ #206 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #207 @1903375578822018 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #208 @1903375595506692 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #107 @1903375595519300 ns -> PROJ #208 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #209 @1903375612191046 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #210 @1903375628874407 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #108 @1903375628885863 ns -> PROJ #210 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #211 @1903375645557321 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #212 @1903375662240683 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #109 @1903375662251723 ns -> PROJ #212 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #213 @1903375678923405 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #214 @1903375695609742 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #110 @1903375695621071 ns -> PROJ #214 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #215 @1903375712293616 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #216 @1903375728974866 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #111 @1903375728986290 ns -> PROJ #216 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #217 @1903375745659924 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #112 @1903375762354102 ns -> PROJ #217 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #218 @1903375762342806 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #219 @1903375779025879 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #220 @1903375795711673 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #113 @1903375795723993 ns -> PROJ #220 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #221 @1903375812393531 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #222 @1903375829077725 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #114 @1903375829088477 ns -> PROJ #222 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #223 @1903375845761054 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #224 @1903375862443744 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #115 @1903375862455584 ns -> PROJ #224 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #225 @1903375879132546 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #226 @1903375895813028 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #116 @1903375895823940 ns -> PROJ #226 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #227 @1903375912499462 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #228 @1903375929181031 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #117 @1903375929192232 ns -> PROJ #228 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #229 @1903375945866601 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #230 @1903375962549515 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #118 @1903375962560171 ns -> PROJ #230 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #231 @1903375979234861 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #232 @1903375995914223 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #119 @1903375995925807 ns -> PROJ #232 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #233 @1903376012601456 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #234 @1903376029286642 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #120 @1903376029298034 ns -> PROJ #234 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #235 @1903376045968884 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #236 @1903376062650486 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #121 @1903376062661558 ns -> PROJ #236 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #237 @1903376079335831 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #238 @1903376096020345 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #122 @1903376096030617 ns -> PROJ #238 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #239 @1903376112702395 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #240 @1903376129384957 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #123 @1903376129396317 ns -> PROJ #240 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #241 @1903376146070687 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #242 @1903376162755456 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #124 @1903376162768129 ns -> PROJ #242 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #243 @1903376179438850 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #244 @1903376196121252 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #125 @1903376196132388 ns -> PROJ #244 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #245 @1903376212807846 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #246 @1903376229488456 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #126 @1903376229499816 ns -> PROJ #246 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #247 @1903376246176073 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #248 @1903376262857323 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #127 @1903376262868331 ns -> PROJ #248 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #249 @1903376279545965 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #250 @1903376296226415 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #128 @1903376296239407 ns -> PROJ #250 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #251 @1903376312910832 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #252 @1903376329590738 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #129 @1903376329601042 ns -> PROJ #252 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #253 @1903376346277044 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #254 @1903376362959862 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #130 @1903376362970806 ns -> PROJ #254 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #255 @1903376379643256 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #256 @1903376396326553 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #131 @1903376396337498 ns -> PROJ #256 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #257 @1903376413009243 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #258 @1903376429692285 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #132 @1903376429702877 ns -> PROJ #258 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #259 @1903376446380095 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #260 @1903376463063489 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #133 @1903376463076193 ns -> PROJ #260 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #261 @1903376479749090 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #262 @1903376496430244 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #134 @1903376496441156 ns -> PROJ #262 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #263 @1903376513118598 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #264 @1903376529798376 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #135 @1903376529813672 ns -> PROJ #264 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #265 @1903376546483209 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #266 @1903376563165099 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #136 @1903376563176875 ns -> PROJ #266 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #267 @1903376579849261 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #268 @1903376596532687 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #137 @1903376596543215 ns -> PROJ #268 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #269 @1903376613217297 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #270 @1903376629900146 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #138 @1903376629911571 ns -> PROJ #270 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #271 @1903376646582228 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #272 @1903376663263830 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #139 @1903376663275574 ns -> PROJ #272 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #273 @1903376679947192 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #274 @1903376696633241 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #140 @1903376696644474 ns -> PROJ #274 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #275 @1903376713318203 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #276 @1903376730003069 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #141 @1903376730014205 ns -> PROJ #276 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #277 @1903376746683039 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #278 @1903376763369953 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #142 @1903376763381825 ns -> PROJ #278 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #279 @1903376780052258 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #280 @1903376796736132 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #143 @1903376796746820 ns -> PROJ #280 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #281 @1903376813419142 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #282 @1903376830101864 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #144 @1903376830112936 ns -> PROJ #282 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #283 @1903376846785961 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #284 @1903376863471979 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #145 @1903376863482763 ns -> PROJ #284 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #285 @1903376880155021 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #286 @1903376896841711 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #146 @1903376896853711 ns -> PROJ #286 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #287 @1903376913523249 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #288 @1903376930207922 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #147 @1903376930220179 ns -> PROJ #288 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #289 @1903376946891156 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #290 @1903376963574710 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #148 @1903376963586038 ns -> PROJ #290 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #291 @1903376980258648 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #292 @1903376996942906 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #149 @1903376996954362 ns -> PROJ #292 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #293 @1903377013626075 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #294 @1903377030309661 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #150 @1903377030320861 ns -> PROJ #294 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #295 @1903377046991103 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #296 @1903377063674913 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #151 @1903377063685633 ns -> PROJ #296 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #297 @1903377080358658 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #298 @1903377097043812 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #152 @1903377097056196 ns -> PROJ #298 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #299 @1903377113726342 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #300 @1903377130411688 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #153 @1903377130423112 ns -> PROJ #300 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #301 @1903377147096042 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #302 @1903377163776907 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #154 @1903377163787692 ns -> PROJ #302 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #303 @1903377180462893 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #304 @1903377197147151 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #155 @1903377197158159 ns -> PROJ #304 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #305 @1903377213830609 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #306 @1903377230515763 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #156 @1903377230528019 ns -> PROJ #306 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #307 @1903377247200916 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #308 @1903377263883062 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #157 @1903377263894902 ns -> PROJ #308 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #309 @1903377280565624 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #310 @1903377297251866 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #158 @1903377297264762 ns -> PROJ #310 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #311 @1903377313934075 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #312 @1903377330616925 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #159 @1903377330627837 ns -> PROJ #312 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #313 @1903377347301247 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #314 @1903377363984513 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #160 @1903377363995873 ns -> PROJ #314 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #315 @1903377380668707 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #316 @1903377397350212 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #161 @1903377397361796 ns -> PROJ #316 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #317 @1903377414033414 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #318 @1903377430719528 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #162 @1903377430730152 ns -> PROJ #318 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #319 @1903377447405098 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #320 @1903377464088172 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #163 @1903377464100172 ns -> PROJ #320 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #321 @1903377480772141 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #322 @1903377497455471 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #164 @1903377497468271 ns -> PROJ #322 visible_id=-1 (mapped mask=-1)
+[PROJ] trig #323 @1903377514140241 ns -> visible_id=-1 | (no ready id; L=1)
+[PROJ] trig #324 @1903377530824243 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #165 @1903377530837907 ns -> PROJ #324 visible_id=-1 (mapped mask=-1)
+[ZMQ ] received id=1, cached 2073600 bytes
+[PROJ] trig #325 @1903377547505620 ns -> visible_id=-1 | (no ready id; L=1)
+[ZMQ ] received id=2, cached 2073600 bytes
+[PROJ] trig #326 @1903377564189974 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #166 @1903377564207638 ns -> PROJ #326 visible_id=-1 (mapped mask=-1)
+[ZMQ ] received id=3, cached 2073600 bytes
+[PROJ] trig #327 @1903377580874488 ns -> visible_id=-1 | (no ready id; L=1)
+[ZMQ ] received id=4, cached 2073600 bytes
+[PROJ] trig #328 @1903377597556250 ns -> visible_id=-1 | queued next_id=2 (readyQ=0, swappedQ~)
+[CAM ] frame #167 @1903377597566970 ns -> PROJ #328 visible_id=-1 (mapped mask=2)
+[DRAW] id=2 target_pidx+1=329 draw+swap=4.70586 ms, swappedQ=1
+[ZMQ ] received id=5, cached 2073600 bytes
+[PROJ] trig #329 @1903377614240956 ns -> visible_id=2 | (no ready id; L=1)
+[ZMQ ] received id=6, cached 2073600 bytes
+[PROJ] trig #330 @1903377630923645 ns -> visible_id=-1 | queued next_id=4 (readyQ=0, swappedQ~)
+[CAM ] frame #168 @1903377630934269 ns -> PROJ #330 visible_id=-1 (mapped mask=4)
+[DRAW] id=4 target_pidx+1=331 draw+swap=5.05792 ms, swappedQ=1
+[ZMQ ] received id=7, cached 2073600 bytes
+[PROJ] trig #331 @1903377647608159 ns -> visible_id=4 | (no ready id; L=1)
+[ZMQ ] received id=8, cached 2073600 bytes
+[PROJ] trig #332 @1903377664291809 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #169 @1903377664302305 ns -> PROJ #332 visible_id=-1 (mapped mask=6)
+[ZMQ ] received id=9, cached 2073600 bytes
+[PROJ] trig #333 @1903377680979139 ns -> visible_id=-1 | queued next_id=6 (readyQ=0, swappedQ~)
+[DRAW] id=6 target_pidx+1=334 draw+swap=5.50595 ms, swappedQ=1
+[ZMQ ] received id=10, cached 2073600 bytes
+[PROJ] trig #334 @1903377697659780 ns -> visible_id=6 | (no ready id; L=1)
+[CAM ] frame #170 @1903377697675973 ns -> PROJ #334 visible_id=6 (mapped mask=8)
+[ZMQ ] received id=11, cached 2073600 bytes
+[PROJ] trig #335 @1903377714342726 ns -> visible_id=-1 | queued next_id=8 (readyQ=0, swappedQ~)
+[DRAW] id=8 target_pidx+1=336 draw+swap=2.35312 ms, swappedQ=1
+[ZMQ ] received id=12, cached 2073600 bytes
+[CAM ] frame #171 @1903377731043272 ns -> PROJ #336 visible_id=8 (mapped mask=10)
+[PROJ] trig #336 @1903377731029480 ns -> visible_id=8 | queued next_id=10 (readyQ=0, swappedQ~)
+[DRAW] id=10 target_pidx+1=337 draw+swap=4.96358 ms, swappedQ=1
+[ZMQ ] received id=13, cached 2073600 bytes
+[PROJ] trig #337 @1903377747711466 ns -> visible_id=10 | (no ready id; L=1)
+[ZMQ ] received id=14, cached 2073600 bytes
+[CAM ] frame #172 @1903377764405452 ns -> PROJ #338 visible_id=-1 (mapped mask=12)
+[PROJ] trig #338 @1903377764394540 ns -> visible_id=-1 | queued next_id=12 (readyQ=0, swappedQ~)
+[DRAW] id=12 target_pidx+1=339 draw+swap=2.4399 ms, swappedQ=1
+[ZMQ ] received id=15, cached 2073600 bytes
+[PROJ] trig #339 @1903377781079085 ns -> visible_id=12 | (no ready id; L=1)
+[ZMQ ] received id=16, cached 2073600 bytes
+[PROJ] trig #340 @1903377797763311 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #173 @1903377797775087 ns -> PROJ #340 visible_id=-1 (mapped mask=14)
+[ZMQ ] received id=17, cached 2073600 bytes
+[PROJ] trig #341 @1903377814448913 ns -> visible_id=-1 | queued next_id=14 (readyQ=0, swappedQ~)
+[DRAW] id=14 target_pidx+1=342 draw+swap=6.26675 ms, swappedQ=1
+[ZMQ ] received id=18, cached 2073600 bytes
+[PROJ] trig #342 @1903377831130227 ns -> visible_id=14 | (no ready id; L=1)
+[CAM ] frame #174 @1903377831141619 ns -> PROJ #342 visible_id=14 (mapped mask=16)
+[ZMQ ] received id=19, cached 2073600 bytes
+[PROJ] trig #343 @1903377847813524 ns -> visible_id=-1 | queued next_id=16 (readyQ=0, swappedQ~)
+[DRAW] id=16 target_pidx+1=344 draw+swap=5.30563 ms, swappedQ=1
+[ZMQ ] received id=20, cached 2073600 bytes
+[PROJ] trig #344 @1903377864497686 ns -> visible_id=16 | (no ready id; L=1)
+[CAM ] frame #175 @1903377864509142 ns -> PROJ #344 visible_id=16 (mapped mask=18)
+[ZMQ ] received id=21, cached 2073600 bytes
+[PROJ] trig #345 @1903377881182840 ns -> visible_id=-1 | queued next_id=18 (readyQ=0, swappedQ~)
+[DRAW] id=18 target_pidx+1=346 draw+swap=6.19277 ms, swappedQ=1
+[ZMQ ] received id=22, cached 2073600 bytes
+[PROJ] trig #346 @1903377897865498 ns -> visible_id=18 | (no ready id; L=1)
+[CAM ] frame #176 @1903377897877274 ns -> PROJ #346 visible_id=18 (mapped mask=20)
+[ZMQ ] received id=23, cached 2073600 bytes
+[PROJ] trig #347 @1903377914548540 ns -> visible_id=-1 | queued next_id=20 (readyQ=0, swappedQ~)
+[DRAW] id=20 target_pidx+1=348 draw+swap=5.22048 ms, swappedQ=1
+[ZMQ ] received id=24, cached 2073600 bytes
+[PROJ] trig #348 @1903377931232477 ns -> visible_id=20 | queued next_id=22 (readyQ=0, swappedQ~)
+[CAM ] frame #177 @1903377931244414 ns -> PROJ #348 visible_id=20 (mapped mask=22)
+[DRAW] id=22 target_pidx+1=349 draw+swap=2.77933 ms, swappedQ=1
+[ZMQ ] received id=25, cached 2073600 bytes
+[PROJ] trig #349 @1903377947916447 ns -> visible_id=22 | (no ready id; L=1)
+[ZMQ ] received id=26, cached 2073600 bytes
+[PROJ] trig #350 @1903377964599489 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #178 @1903377964610689 ns -> PROJ #350 visible_id=-1 (mapped mask=24)
+[ZMQ ] received id=27, cached 2073600 bytes
+[PROJ] trig #351 @1903377981283203 ns -> visible_id=-1 | queued next_id=24 (readyQ=0, swappedQ~)
+[DRAW] id=24 target_pidx+1=352 draw+swap=4.58787 ms, swappedQ=1
+[ZMQ ] received id=28, cached 2073600 bytes
+[PROJ] trig #352 @1903377997967333 ns -> visible_id=24 | queued next_id=26 (readyQ=0, swappedQ~)
+[CAM ] frame #179 @1903377997979941 ns -> PROJ #352 visible_id=24 (mapped mask=26)
+[DRAW] id=26 target_pidx+1=353 draw+swap=3.83552 ms, swappedQ=1
+[ZMQ ] received id=29, cached 2073600 bytes
+[PROJ] trig #353 @1903378014651366 ns -> visible_id=26 | queued next_id=28 (readyQ=0, swappedQ~)
+[CAM ] frame #180 @1903378014662502 ns -> PROJ #353 visible_id=26 (mapped mask=28)
+[DRAW] id=28 target_pidx+1=354 draw+swap=3.97635 ms, swappedQ=1
+[ZMQ ] received id=30, cached 2073600 bytes
+[PROJ] trig #354 @1903378031334440 ns -> visible_id=28 | queued next_id=29 (readyQ=0, swappedQ~)
+[CAM ] frame #181 @1903378031345512 ns -> PROJ #354 visible_id=28 (mapped mask=29)
+[DRAW] id=29 target_pidx+1=355 draw+swap=3.82413 ms, swappedQ=1
+[ZMQ ] received id=31, cached 2073600 bytes
+[PROJ] trig #355 @1903378048021098 ns -> visible_id=29 | (no ready id; L=1)
+[ZMQ ] received id=32, cached 2073600 bytes
+[CAM ] frame #182 @1903378064710924 ns -> PROJ #356 visible_id=-1 (mapped mask=30)
+[PROJ] trig #356 @1903378064700204 ns -> visible_id=-1 | queued next_id=30 (readyQ=0, swappedQ~)
+[DRAW] id=30 target_pidx+1=357 draw+swap=2.59766 ms, swappedQ=1
+[ZMQ ] received id=33, cached 2073600 bytes
+[PROJ] trig #357 @1903378081387917 ns -> visible_id=30 | (no ready id; L=1)
+[ZMQ ] received id=34, cached 2073600 bytes
+[PROJ] trig #358 @1903378098070383 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #183 @1903378098081519 ns -> PROJ #358 visible_id=-1 (mapped mask=32)
+[ZMQ ] received id=35, cached 2073600 bytes
+[PROJ] trig #359 @1903378114754673 ns -> visible_id=-1 | queued next_id=32 (readyQ=0, swappedQ~)
+[DRAW] id=32 target_pidx+1=360 draw+swap=2.30416 ms, swappedQ=1
+[ZMQ ] received id=36, cached 2073600 bytes
+[PROJ] trig #360 @1903378131436947 ns -> visible_id=32 | (no ready id; L=1)
+[CAM ] frame #184 @1903378131448211 ns -> PROJ #360 visible_id=32 (mapped mask=34)
+[ZMQ ] received id=37, cached 2073600 bytes
+[PROJ] trig #361 @1903378148121685 ns -> visible_id=-1 | queued next_id=34 (readyQ=0, swappedQ~)
+[DRAW] id=34 target_pidx+1=362 draw+swap=3.26403 ms, swappedQ=1
+[ZMQ ] received id=38, cached 2073600 bytes
+[PROJ] trig #362 @1903378164817654 ns -> visible_id=34 | (no ready id; L=1)
+[CAM ] frame #185 @1903378164814006 ns -> PROJ #362 visible_id=34 (mapped mask=36)
+[ZMQ ] received id=39, cached 2073600 bytes
+[PROJ] trig #363 @1903378181488024 ns -> visible_id=-1 | queued next_id=36 (readyQ=0, swappedQ~)
+[DRAW] id=36 target_pidx+1=364 draw+swap=2.37741 ms, swappedQ=1
+[ZMQ ] received id=40, cached 2073600 bytes
+[PROJ] trig #364 @1903378198172154 ns -> visible_id=36 | (no ready id; L=1)
+[CAM ] frame #186 @1903378198183066 ns -> PROJ #364 visible_id=36 (mapped mask=38)
+[ZMQ ] received id=41, cached 2073600 bytes
+[PROJ] trig #365 @1903378214855804 ns -> visible_id=-1 | queued next_id=38 (readyQ=0, swappedQ~)
+[DRAW] id=38 target_pidx+1=366 draw+swap=2.31008 ms, swappedQ=1
+[ZMQ ] received id=42, cached 2073600 bytes
+[PROJ] trig #366 @1903378231539773 ns -> visible_id=38 | (no ready id; L=1)
+[CAM ] frame #187 @1903378231551486 ns -> PROJ #366 visible_id=38 (mapped mask=40)
+[ZMQ ] received id=43, cached 2073600 bytes
+[PROJ] trig #367 @1903378248223871 ns -> visible_id=-1 | queued next_id=40 (readyQ=0, swappedQ~)
+[DRAW] id=40 target_pidx+1=368 draw+swap=2.43261 ms, swappedQ=1
+[ZMQ ] received id=44, cached 2073600 bytes
+[PROJ] trig #368 @1903378264908865 ns -> visible_id=40 | (no ready id; L=1)
+[CAM ] frame #188 @1903378264921057 ns -> PROJ #368 visible_id=40 (mapped mask=42)
+[ZMQ ] received id=45, cached 2073600 bytes
+[PROJ] trig #369 @1903378281591715 ns -> visible_id=-1 | queued next_id=42 (readyQ=0, swappedQ~)
+[DRAW] id=42 target_pidx+1=370 draw+swap=4.44698 ms, swappedQ=1
+[ZMQ ] received id=46, cached 2073600 bytes
+[PROJ] trig #370 @1903378298275077 ns -> visible_id=42 | (no ready id; L=1)
+[CAM ] frame #189 @1903378298286309 ns -> PROJ #370 visible_id=42 (mapped mask=44)
+[ZMQ ] received id=47, cached 2073600 bytes
+[PROJ] trig #371 @1903378314959014 ns -> visible_id=-1 | queued next_id=44 (readyQ=0, swappedQ~)
+[ZMQ ] received id=48, cached 2073600 bytes
+[DRAW] id=44 target_pidx+1=372 draw+swap=7.75594 ms, swappedQ=1
+[PROJ] trig #372 @1903378331642248 ns -> visible_id=44 | (no ready id; L=1)
+[CAM ] frame #190 @1903378331654088 ns -> PROJ #372 visible_id=44 (mapped mask=46)
+[ZMQ ] received id=49, cached 2073600 bytes
+[PROJ] trig #373 @1903378348326218 ns -> visible_id=-1 | queued next_id=46 (readyQ=0, swappedQ~)
+[DRAW] id=46 target_pidx+1=374 draw+swap=2.63414 ms, swappedQ=1
+[ZMQ ] received id=50, cached 2073600 bytes
+[PROJ] trig #374 @1903378365011020 ns -> visible_id=46 | (no ready id; L=1)
+[CAM ] frame #191 @1903378365023692 ns -> PROJ #374 visible_id=46 (mapped mask=48)
+[ZMQ ] received id=51, cached 2073600 bytes
+[PROJ] trig #375 @1903378381693485 ns -> visible_id=-1 | queued next_id=48 (readyQ=0, swappedQ~)
+[DRAW] id=48 target_pidx+1=376 draw+swap=4.96278 ms, swappedQ=1
+[ZMQ ] received id=52, cached 2073600 bytes
+[PROJ] trig #376 @1903378398377775 ns -> visible_id=48 | (no ready id; L=1)
+[CAM ] frame #192 @1903378398389263 ns -> PROJ #376 visible_id=48 (mapped mask=50)
+[ZMQ ] received id=53, cached 2073600 bytes
+[PROJ] trig #377 @1903378415060913 ns -> visible_id=-1 | queued next_id=50 (readyQ=0, swappedQ~)
+[DRAW] id=50 target_pidx+1=378 draw+swap=3.84186 ms, swappedQ=1
+[ZMQ ] received id=54, cached 2073600 bytes
+[PROJ] trig #378 @1903378431746803 ns -> visible_id=50 | (no ready id; L=1)
+[CAM ] frame #193 @1903378431760243 ns -> PROJ #378 visible_id=50 (mapped mask=52)
+[ZMQ ] received id=55, cached 2073600 bytes
+[PROJ] trig #379 @1903378448428981 ns -> visible_id=-1 | queued next_id=52 (readyQ=0, swappedQ~)
+[DRAW] id=52 target_pidx+1=380 draw+swap=3.13002 ms, swappedQ=1
+[ZMQ ] received id=56, cached 2073600 bytes
+[PROJ] trig #380 @1903378465111926 ns -> visible_id=52 | queued next_id=54 (readyQ=0, swappedQ~)
+[CAM ] frame #194 @1903378465122743 ns -> PROJ #380 visible_id=52 (mapped mask=54)
+[DRAW] id=54 target_pidx+1=381 draw+swap=2.58694 ms, swappedQ=1
+[ZMQ ] received id=57, cached 2073600 bytes
+[PROJ] trig #381 @1903378481797880 ns -> visible_id=54 | (no ready id; L=1)
+[ZMQ ] received id=58, cached 2073600 bytes
+[PROJ] trig #382 @1903378498481114 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #195 @1903378498493850 ns -> PROJ #382 visible_id=-1 (mapped mask=56)
+[ZMQ ] received id=59, cached 2073600 bytes
+[PROJ] trig #383 @1903378515165404 ns -> visible_id=-1 | queued next_id=56 (readyQ=0, swappedQ~)
+[DRAW] id=56 target_pidx+1=384 draw+swap=2.64653 ms, swappedQ=1
+[ZMQ ] received id=60, cached 2073600 bytes
+[PROJ] trig #384 @1903378531847774 ns -> visible_id=56 | (no ready id; L=1)
+[CAM ] frame #196 @1903378531859230 ns -> PROJ #384 visible_id=56 (mapped mask=58)
+[ZMQ ] received id=61, cached 2073600 bytes
+[PROJ] trig #385 @1903378548532383 ns -> visible_id=-1 | queued next_id=58 (readyQ=0, swappedQ~)
+[DRAW] id=58 target_pidx+1=386 draw+swap=2.72698 ms, swappedQ=1
+[ZMQ ] received id=62, cached 2073600 bytes
+[PROJ] trig #386 @1903378565216001 ns -> visible_id=58 | (no ready id; L=1)
+[CAM ] frame #197 @1903378565229985 ns -> PROJ #386 visible_id=58 (mapped mask=60)
+[ZMQ ] received id=63, cached 2073600 bytes
+[PROJ] trig #387 @1903378581899235 ns -> visible_id=-1 | queued next_id=60 (readyQ=0, swappedQ~)
+[DRAW] id=60 target_pidx+1=388 draw+swap=4.36822 ms, swappedQ=1
+[ZMQ ] received id=64, cached 2073600 bytes
+[PROJ] trig #388 @1903378598583749 ns -> visible_id=60 | (no ready id; L=1)
+[CAM ] frame #198 @1903378598596549 ns -> PROJ #388 visible_id=60 (mapped mask=62)
+[ZMQ ] received id=65, cached 2073600 bytes
+[PROJ] trig #389 @1903378615266982 ns -> visible_id=-1 | queued next_id=62 (readyQ=0, swappedQ~)
+[DRAW] id=62 target_pidx+1=390 draw+swap=2.7265 ms, swappedQ=1
+[ZMQ ] received id=66, cached 2073600 bytes
+[PROJ] trig #390 @1903378631951816 ns -> visible_id=62 | (no ready id; L=1)
+[CAM ] frame #199 @1903378631965768 ns -> PROJ #390 visible_id=62 (mapped mask=64)
+[ZMQ ] received id=67, cached 2073600 bytes
+[PROJ] trig #391 @1903378648635370 ns -> visible_id=-1 | queued next_id=64 (readyQ=0, swappedQ~)
+[DRAW] id=64 target_pidx+1=392 draw+swap=2.28496 ms, swappedQ=1
+[ZMQ ] received id=68, cached 2073600 bytes
+[PROJ] trig #392 @1903378665317804 ns -> visible_id=64 | (no ready id; L=1)
+[CAM ] frame #200 @1903378665329804 ns -> PROJ #392 visible_id=64 (mapped mask=66)
+[ZMQ ] received id=69, cached 2073600 bytes
+[PROJ] trig #393 @1903378682001902 ns -> visible_id=-1 | queued next_id=66 (readyQ=0, swappedQ~)
+[DRAW] id=66 target_pidx+1=394 draw+swap=2.20192 ms, swappedQ=1
+[ZMQ ] received id=70, cached 2073600 bytes
+[PROJ] trig #394 @1903378698687215 ns -> visible_id=66 | (no ready id; L=1)
+[CAM ] frame #201 @1903378698700432 ns -> PROJ #394 visible_id=66 (mapped mask=68)
+[ZMQ ] received id=71, cached 2073600 bytes
+[PROJ] trig #395 @1903378715368465 ns -> visible_id=-1 | queued next_id=68 (readyQ=0, swappedQ~)
+[DRAW] id=68 target_pidx+1=396 draw+swap=2.12016 ms, swappedQ=1
+[ZMQ ] received id=72, cached 2073600 bytes
+[PROJ] trig #396 @1903378732053491 ns -> visible_id=68 | (no ready id; L=1)
+[CAM ] frame #202 @1903378732065171 ns -> PROJ #396 visible_id=68 (mapped mask=70)
+[ZMQ ] received id=73, cached 2073600 bytes
+[PROJ] trig #397 @1903378748735829 ns -> visible_id=-1 | queued next_id=70 (readyQ=0, swappedQ~)
+[DRAW] id=70 target_pidx+1=398 draw+swap=2.26826 ms, swappedQ=1
+[ZMQ ] received id=74, cached 2073600 bytes
+[PROJ] trig #398 @1903378765420758 ns -> visible_id=70 | (no ready id; L=1)
+[CAM ] frame #203 @1903378765433911 ns -> PROJ #398 visible_id=70 (mapped mask=72)
+[ZMQ ] received id=75, cached 2073600 bytes
+[PROJ] trig #399 @1903378782104248 ns -> visible_id=-1 | queued next_id=72 (readyQ=0, swappedQ~)
+[DRAW] id=72 target_pidx+1=400 draw+swap=2.33514 ms, swappedQ=1
+[ZMQ ] received id=76, cached 2073600 bytes
+[PROJ] trig #400 @1903378798786234 ns -> visible_id=72 | (no ready id; L=1)
+[CAM ] frame #204 @1903378798798298 ns -> PROJ #400 visible_id=72 (mapped mask=74)
+[ZMQ ] received id=77, cached 2073600 bytes
+[PROJ] trig #401 @1903378815471324 ns -> visible_id=-1 | queued next_id=74 (readyQ=0, swappedQ~)
+[DRAW] id=74 target_pidx+1=402 draw+swap=2.22486 ms, swappedQ=1
+[ZMQ ] received id=78, cached 2073600 bytes
+[PROJ] trig #402 @1903378832155390 ns -> visible_id=74 | (no ready id; L=1)
+[CAM ] frame #205 @1903378832166942 ns -> PROJ #402 visible_id=74 (mapped mask=76)
+[ZMQ ] received id=79, cached 2073600 bytes
+[PROJ] trig #403 @1903378848837983 ns -> visible_id=-1 | queued next_id=76 (readyQ=0, swappedQ~)
+[DRAW] id=76 target_pidx+1=404 draw+swap=2.26454 ms, swappedQ=1
+[ZMQ ] received id=80, cached 2073600 bytes
+[PROJ] trig #404 @1903378865521153 ns -> visible_id=76 | (no ready id; L=1)
+[CAM ] frame #206 @1903378865531361 ns -> PROJ #404 visible_id=76 (mapped mask=78)
+[ZMQ ] received id=81, cached 2073600 bytes
+[PROJ] trig #405 @1903378882207171 ns -> visible_id=-1 | queued next_id=78 (readyQ=0, swappedQ~)
+[DRAW] id=78 target_pidx+1=406 draw+swap=2.55926 ms, swappedQ=1
+[ZMQ ] received id=82, cached 2073600 bytes
+[PROJ] trig #406 @1903378898889189 ns -> visible_id=78 | (no ready id; L=1)
+[CAM ] frame #207 @1903378898901253 ns -> PROJ #406 visible_id=78 (mapped mask=80)
+[ZMQ ] received id=83, cached 2073600 bytes
+[PROJ] trig #407 @1903378915572262 ns -> visible_id=-1 | queued next_id=80 (readyQ=0, swappedQ~)
+[DRAW] id=80 target_pidx+1=408 draw+swap=2.16445 ms, swappedQ=1
+[ZMQ ] received id=84, cached 2073600 bytes
+[PROJ] trig #408 @1903378932257032 ns -> visible_id=80 | (no ready id; L=1)
+[CAM ] frame #208 @1903378932268680 ns -> PROJ #408 visible_id=80 (mapped mask=82)
+[ZMQ ] received id=85, cached 2073600 bytes
+[PROJ] trig #409 @1903378948940042 ns -> visible_id=-1 | queued next_id=82 (readyQ=0, swappedQ~)
+[DRAW] id=82 target_pidx+1=410 draw+swap=2.12211 ms, swappedQ=1
+[ZMQ ] received id=86, cached 2073600 bytes
+[PROJ] trig #410 @1903378965623820 ns -> visible_id=82 | (no ready id; L=1)
+[CAM ] frame #209 @1903378965634636 ns -> PROJ #410 visible_id=82 (mapped mask=84)
+[ZMQ ] received id=87, cached 2073600 bytes
+[PROJ] trig #411 @1903378982308302 ns -> visible_id=-1 | queued next_id=84 (readyQ=0, swappedQ~)
+[DRAW] id=84 target_pidx+1=412 draw+swap=2.54877 ms, swappedQ=1
+[ZMQ ] received id=88, cached 2073600 bytes
+[PROJ] trig #412 @1903378998991983 ns -> visible_id=84 | (no ready id; L=1)
+[CAM ] frame #210 @1903378999003632 ns -> PROJ #412 visible_id=84 (mapped mask=86)
+[ZMQ ] received id=89, cached 2073600 bytes
+[PROJ] trig #413 @1903379015676689 ns -> visible_id=-1 | queued next_id=86 (readyQ=0, swappedQ~)
+[DRAW] id=86 target_pidx+1=414 draw+swap=2.22608 ms, swappedQ=1
+[ZMQ ] received id=90, cached 2073600 bytes
+[PROJ] trig #414 @1903379032359251 ns -> visible_id=86 | (no ready id; L=1)
+[CAM ] frame #211 @1903379032370067 ns -> PROJ #414 visible_id=86 (mapped mask=88)
+[ZMQ ] received id=91, cached 2073600 bytes
+[PROJ] trig #415 @1903379049042901 ns -> visible_id=-1 | queued next_id=88 (readyQ=0, swappedQ~)
+[DRAW] id=88 target_pidx+1=416 draw+swap=2.56765 ms, swappedQ=1
+[ZMQ ] received id=92, cached 2073600 bytes
+[PROJ] trig #416 @1903379065726614 ns -> visible_id=88 | (no ready id; L=1)
+[CAM ] frame #212 @1903379065737783 ns -> PROJ #416 visible_id=88 (mapped mask=90)
+[ZMQ ] received id=93, cached 2073600 bytes
+[PROJ] trig #417 @1903379082409688 ns -> visible_id=-1 | queued next_id=90 (readyQ=0, swappedQ~)
+[DRAW] id=90 target_pidx+1=418 draw+swap=2.23078 ms, swappedQ=1
+[ZMQ ] received id=94, cached 2073600 bytes
+[PROJ] trig #418 @1903379099095098 ns -> visible_id=90 | (no ready id; L=1)
+[CAM ] frame #213 @1903379099106682 ns -> PROJ #418 visible_id=90 (mapped mask=92)
+[ZMQ ] received id=95, cached 2073600 bytes
+[PROJ] trig #419 @1903379115777244 ns -> visible_id=-1 | queued next_id=92 (readyQ=0, swappedQ~)
+[DRAW] id=92 target_pidx+1=420 draw+swap=2.17235 ms, swappedQ=1
+[ZMQ ] received id=96, cached 2073600 bytes
+[PROJ] trig #420 @1903379132461406 ns -> visible_id=92 | (no ready id; L=1)
+[CAM ] frame #214 @1903379132473022 ns -> PROJ #420 visible_id=92 (mapped mask=94)
+[ZMQ ] received id=97, cached 2073600 bytes
+[PROJ] trig #421 @1903379149145343 ns -> visible_id=-1 | queued next_id=94 (readyQ=0, swappedQ~)
+[DRAW] id=94 target_pidx+1=422 draw+swap=2.24419 ms, swappedQ=1
+[ZMQ ] received id=98, cached 2073600 bytes
+[PROJ] trig #422 @1903379165828417 ns -> visible_id=94 | (no ready id; L=1)
+[CAM ] frame #215 @1903379165839713 ns -> PROJ #422 visible_id=94 (mapped mask=96)
+[ZMQ ] received id=99, cached 2073600 bytes
+[PROJ] trig #423 @1903379182512483 ns -> visible_id=-1 | queued next_id=96 (readyQ=0, swappedQ~)
+[DRAW] id=96 target_pidx+1=424 draw+swap=2.34154 ms, swappedQ=1
+[ZMQ ] received id=100, cached 2073600 bytes
+[PROJ] trig #424 @1903379199196741 ns -> visible_id=96 | (no ready id; L=1)
+[CAM ] frame #216 @1903379199208901 ns -> PROJ #424 visible_id=96 (mapped mask=98)
+[ZMQ ] received id=101, cached 2073600 bytes
+[PROJ] trig #425 @1903379215880359 ns -> visible_id=-1 | queued next_id=98 (readyQ=0, swappedQ~)
+[DRAW] id=98 target_pidx+1=426 draw+swap=2.26685 ms, swappedQ=1
+[ZMQ ] received id=102, cached 2073600 bytes
+[PROJ] trig #426 @1903379232565032 ns -> visible_id=98 | (no ready id; L=1)
+[CAM ] frame #217 @1903379232577768 ns -> PROJ #426 visible_id=98 (mapped mask=100)
+[ZMQ ] received id=103, cached 2073600 bytes
+[PROJ] trig #427 @1903379249248746 ns -> visible_id=-1 | queued next_id=100 (readyQ=0, swappedQ~)
+[DRAW] id=100 target_pidx+1=428 draw+swap=2.41629 ms, swappedQ=1
+[ZMQ ] received id=104, cached 2073600 bytes
+[PROJ] trig #428 @1903379265933644 ns -> visible_id=100 | (no ready id; L=1)
+[CAM ] frame #218 @1903379265946092 ns -> PROJ #428 visible_id=100 (mapped mask=102)
+[ZMQ ] received id=105, cached 2073600 bytes
+[PROJ] trig #429 @1903379282617102 ns -> visible_id=-1 | queued next_id=102 (readyQ=0, swappedQ~)
+[DRAW] id=102 target_pidx+1=430 draw+swap=2.32371 ms, swappedQ=1
+[ZMQ ] received id=106, cached 2073600 bytes
+[PROJ] trig #430 @1903379299300143 ns -> visible_id=102 | (no ready id; L=1)
+[CAM ] frame #219 @1903379299312784 ns -> PROJ #430 visible_id=102 (mapped mask=104)
+[ZMQ ] received id=107, cached 2073600 bytes
+[PROJ] trig #431 @1903379315981841 ns -> visible_id=-1 | queued next_id=104 (readyQ=0, swappedQ~)
+[DRAW] id=104 target_pidx+1=432 draw+swap=2.16192 ms, swappedQ=1
+[ZMQ ] received id=108, cached 2073600 bytes
+[PROJ] trig #432 @1903379332666323 ns -> visible_id=104 | (no ready id; L=1)
+[CAM ] frame #220 @1903379332677299 ns -> PROJ #432 visible_id=104 (mapped mask=106)
+[ZMQ ] received id=109, cached 2073600 bytes
+[PROJ] trig #433 @1903379349350677 ns -> visible_id=-1 | queued next_id=106 (readyQ=0, swappedQ~)
+[DRAW] id=106 target_pidx+1=434 draw+swap=2.17766 ms, swappedQ=1
+[ZMQ ] received id=110, cached 2073600 bytes
+[PROJ] trig #434 @1903379366034167 ns -> visible_id=106 | (no ready id; L=1)
+[CAM ] frame #221 @1903379366047031 ns -> PROJ #434 visible_id=106 (mapped mask=108)
+[ZMQ ] received id=111, cached 2073600 bytes
+[PROJ] trig #435 @1903379382720344 ns -> visible_id=-1 | queued next_id=108 (readyQ=0, swappedQ~)
+[DRAW] id=108 target_pidx+1=436 draw+swap=2.31187 ms, swappedQ=1
+[ZMQ ] received id=112, cached 2073600 bytes
+[PROJ] trig #436 @1903379399401978 ns -> visible_id=108 | queued next_id=110 (readyQ=0, swappedQ~)
+[CAM ] frame #222 @1903379399413402 ns -> PROJ #436 visible_id=108 (mapped mask=110)
+[DRAW] id=110 target_pidx+1=437 draw+swap=2.37274 ms, swappedQ=1
+[ZMQ ] received id=113, cached 2073600 bytes
+[PROJ] trig #437 @1903379416085532 ns -> visible_id=110 | (no ready id; L=1)
+[ZMQ ] received id=114, cached 2073600 bytes
+[PROJ] trig #438 @1903379432768478 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #223 @1903379432779966 ns -> PROJ #438 visible_id=-1 (mapped mask=112)
+[ZMQ ] received id=115, cached 2073600 bytes
+[PROJ] trig #439 @1903379449453279 ns -> visible_id=-1 | queued next_id=112 (readyQ=0, swappedQ~)
+[DRAW] id=112 target_pidx+1=440 draw+swap=2.23763 ms, swappedQ=1
+[ZMQ ] received id=116, cached 2073600 bytes
+[PROJ] trig #440 @1903379466137249 ns -> visible_id=112 | (no ready id; L=1)
+[CAM ] frame #224 @1903379466148257 ns -> PROJ #440 visible_id=112 (mapped mask=114)
+[ZMQ ] received id=117, cached 2073600 bytes
+[PROJ] trig #441 @1903379482819939 ns -> visible_id=-1 | queued next_id=114 (readyQ=0, swappedQ~)
+[DRAW] id=114 target_pidx+1=442 draw+swap=2.7263 ms, swappedQ=1
+[ZMQ ] received id=118, cached 2073600 bytes
+[PROJ] trig #442 @1903379499504613 ns -> visible_id=114 | queued next_id=116 (readyQ=0, swappedQ~)
+[CAM ] frame #225 @1903379499515845 ns -> PROJ #442 visible_id=114 (mapped mask=116)
+[DRAW] id=116 target_pidx+1=443 draw+swap=2.30822 ms, swappedQ=1
+[ZMQ ] received id=119, cached 2073600 bytes
+[PROJ] trig #443 @1903379516187207 ns -> visible_id=116 | (no ready id; L=1)
+[ZMQ ] received id=120, cached 2073600 bytes
+[PROJ] trig #444 @1903379532872296 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #226 @1903379532885353 ns -> PROJ #444 visible_id=-1 (mapped mask=118)
+[ZMQ ] received id=121, cached 2073600 bytes
+[PROJ] trig #445 @1903379549555434 ns -> visible_id=-1 | queued next_id=118 (readyQ=0, swappedQ~)
+[DRAW] id=118 target_pidx+1=446 draw+swap=2.21654 ms, swappedQ=1
+[ZMQ ] received id=122, cached 2073600 bytes
+[PROJ] trig #446 @1903379566238764 ns -> visible_id=118 | queued next_id=120 (readyQ=0, swappedQ~)
+[CAM ] frame #227 @1903379566250188 ns -> PROJ #446 visible_id=118 (mapped mask=120)
+[ZMQ ] received id=123, cached 2073600 bytes
+[DRAW] id=120 target_pidx+1=447 draw+swap=4.68854 ms, swappedQ=1
+[PROJ] trig #447 @1903379582924238 ns -> visible_id=120 | (no ready id; L=1)
+[ZMQ ] received id=124, cached 2073600 bytes
+[PROJ] trig #448 @1903379599606735 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #228 @1903379599617648 ns -> PROJ #448 visible_id=-1 (mapped mask=122)
+[ZMQ ] received id=125, cached 2073600 bytes
+[PROJ] trig #449 @1903379616292785 ns -> visible_id=-1 | queued next_id=122 (readyQ=0, swappedQ~)
+[DRAW] id=122 target_pidx+1=450 draw+swap=3.93699 ms, swappedQ=1
+[ZMQ ] received id=126, cached 2073600 bytes
+[PROJ] trig #450 @1903379632974323 ns -> visible_id=122 | (no ready id; L=1)
+[CAM ] frame #229 @1903379632985203 ns -> PROJ #450 visible_id=122 (mapped mask=124)
+[ZMQ ] received id=127, cached 2073600 bytes
+[PROJ] trig #451 @1903379649657397 ns -> visible_id=-1 | queued next_id=124 (readyQ=0, swappedQ~)
+[DRAW] id=124 target_pidx+1=452 draw+swap=2.32646 ms, swappedQ=1
+[ZMQ ] received id=128, cached 2073600 bytes
+[PROJ] trig #452 @1903379666342071 ns -> visible_id=124 | (no ready id; L=1)
+[CAM ] frame #230 @1903379666353655 ns -> PROJ #452 visible_id=124 (mapped mask=126)
+[ZMQ ] received id=129, cached 2073600 bytes
+[PROJ] trig #453 @1903379683025688 ns -> visible_id=-1 | queued next_id=126 (readyQ=0, swappedQ~)
+[DRAW] id=126 target_pidx+1=454 draw+swap=3.4849 ms, swappedQ=1
+[ZMQ ] received id=130, cached 2073600 bytes
+[PROJ] trig #454 @1903379699708954 ns -> visible_id=126 | queued next_id=128 (readyQ=0, swappedQ~)
+[CAM ] frame #231 @1903379699719962 ns -> PROJ #454 visible_id=126 (mapped mask=128)
+[ZMQ ] received id=131, cached 2073600 bytes
+[DRAW] id=128 target_pidx+1=455 draw+swap=6.01242 ms, swappedQ=1
+[PROJ] trig #455 @1903379716392284 ns -> visible_id=128 | (no ready id; L=1)
+[ZMQ ] received id=132, cached 2073600 bytes
+[CAM ] frame #232 @1903379733087422 ns -> PROJ #456 visible_id=-1 (mapped mask=130)
+[PROJ] trig #456 @1903379733076222 ns -> visible_id=-1 | queued next_id=130 (readyQ=0, swappedQ~)
+[DRAW] id=130 target_pidx+1=457 draw+swap=2.92506 ms, swappedQ=1
+[ZMQ ] received id=133, cached 2073600 bytes
+[PROJ] trig #457 @1903379749773344 ns -> visible_id=130 | (no ready id; L=1)
+[ZMQ ] received id=134, cached 2073600 bytes
+[PROJ] trig #458 @1903379766445153 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #233 @1903379766458049 ns -> PROJ #458 visible_id=-1 (mapped mask=132)
+[ZMQ ] received id=135, cached 2073600 bytes
+[PROJ] trig #459 @1903379783129283 ns -> visible_id=-1 | queued next_id=132 (readyQ=0, swappedQ~)
+[DRAW] id=132 target_pidx+1=460 draw+swap=5.44045 ms, swappedQ=1
+[ZMQ ] received id=136, cached 2073600 bytes
+[PROJ] trig #460 @1903379799813701 ns -> visible_id=132 | queued next_id=134 (readyQ=0, swappedQ~)
+[CAM ] frame #234 @1903379799831749 ns -> PROJ #460 visible_id=132 (mapped mask=134)
+[ZMQ ] received id=137, cached 2073600 bytes
+[DRAW] id=134 target_pidx+1=461 draw+swap=7.14394 ms, swappedQ=1
+[PROJ] trig #461 @1903379816495367 ns -> visible_id=134 | (no ready id; L=1)
+[ZMQ ] received id=138, cached 2073600 bytes
+[PROJ] trig #462 @1903379833178696 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #235 @1903379833190633 ns -> PROJ #462 visible_id=-1 (mapped mask=136)
+[ZMQ ] received id=139, cached 2073600 bytes
+[PROJ] trig #463 @1903379849862122 ns -> visible_id=-1 | queued next_id=136 (readyQ=0, swappedQ~)
+[DRAW] id=136 target_pidx+1=464 draw+swap=2.30294 ms, swappedQ=1
+[ZMQ ] received id=140, cached 2073600 bytes
+[PROJ] trig #464 @1903379866547500 ns -> visible_id=136 | (no ready id; L=1)
+[CAM ] frame #236 @1903379866558892 ns -> PROJ #464 visible_id=136 (mapped mask=138)
+[ZMQ ] received id=141, cached 2073600 bytes
+[PROJ] trig #465 @1903379883230318 ns -> visible_id=-1 | queued next_id=138 (readyQ=0, swappedQ~)
+[DRAW] id=138 target_pidx+1=466 draw+swap=2.61344 ms, swappedQ=1
+[ZMQ ] received id=142, cached 2073600 bytes
+[PROJ] trig #466 @1903379899914863 ns -> visible_id=138 | (no ready id; L=1)
+[CAM ] frame #237 @1903379899925936 ns -> PROJ #466 visible_id=138 (mapped mask=140)
+[ZMQ ] received id=143, cached 2073600 bytes
+[PROJ] trig #467 @1903379916597489 ns -> visible_id=-1 | queued next_id=140 (readyQ=0, swappedQ~)
+[DRAW] id=140 target_pidx+1=468 draw+swap=3.71853 ms, swappedQ=1
+[ZMQ ] received id=144, cached 2073600 bytes
+[CAM ] frame #238 @1903379933296467 ns -> PROJ #468 visible_id=140 (mapped mask=142)
+[PROJ] trig #468 @1903379933281939 ns -> visible_id=140 | queued next_id=142 (readyQ=0, swappedQ~)
+[ZMQ ] received id=145, cached 2073600 bytes
+[DRAW] id=142 target_pidx+1=469 draw+swap=6.16032 ms, swappedQ=1
+[PROJ] trig #469 @1903379949964533 ns -> visible_id=142 | (no ready id; L=1)
+[ZMQ ] received id=146, cached 2073600 bytes
+[PROJ] trig #470 @1903379966650903 ns -> visible_id=-1 | queued next_id=144 (readyQ=0, swappedQ~)
+[CAM ] frame #239 @1903379966663223 ns -> PROJ #470 visible_id=-1 (mapped mask=144)
+[DRAW] id=144 target_pidx+1=471 draw+swap=2.31789 ms, swappedQ=1
+[ZMQ ] received id=147, cached 2073600 bytes
+[PROJ] trig #471 @1903379983332440 ns -> visible_id=144 | (no ready id; L=1)
+[ZMQ ] received id=148, cached 2073600 bytes
+[PROJ] trig #472 @1903380000015962 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #240 @1903380000029690 ns -> PROJ #472 visible_id=-1 (mapped mask=146)
+[ZMQ ] received id=149, cached 2073600 bytes
+[PROJ] trig #473 @1903380016702140 ns -> visible_id=-1 | queued next_id=146 (readyQ=0, swappedQ~)
+[DRAW] id=146 target_pidx+1=474 draw+swap=3.20877 ms, swappedQ=1
+[ZMQ ] received id=150, cached 2073600 bytes
+[PROJ] trig #474 @1903380033387358 ns -> visible_id=146 | queued next_id=148 (readyQ=0, swappedQ~)
+[CAM ] frame #241 @1903380033411262 ns -> PROJ #474 visible_id=146 (mapped mask=148)
+[ZMQ ] received id=151, cached 2073600 bytes
+[DRAW] id=148 target_pidx+1=475 draw+swap=5.56275 ms, swappedQ=1
+[PROJ] trig #475 @1903380050068543 ns -> visible_id=148 | (no ready id; L=1)
+[ZMQ ] received id=152, cached 2073600 bytes
+[PROJ] trig #476 @1903380066752033 ns -> visible_id=-1 | queued next_id=150 (readyQ=0, swappedQ~)
+[CAM ] frame #242 @1903380066764097 ns -> PROJ #476 visible_id=-1 (mapped mask=150)
+[DRAW] id=150 target_pidx+1=477 draw+swap=2.27443 ms, swappedQ=1
+[ZMQ ] received id=153, cached 2073600 bytes
+[PROJ] trig #477 @1903380083434595 ns -> visible_id=150 | (no ready id; L=1)
+[ZMQ ] received id=154, cached 2073600 bytes
+[PROJ] trig #478 @1903380100119717 ns -> visible_id=-1 | queued next_id=152 (readyQ=0, swappedQ~)
+[CAM ] frame #243 @1903380100131429 ns -> PROJ #478 visible_id=-1 (mapped mask=152)
+[DRAW] id=152 target_pidx+1=479 draw+swap=2.49299 ms, swappedQ=1
+[ZMQ ] received id=155, cached 2073600 bytes
+[PROJ] trig #479 @1903380116803655 ns -> visible_id=152 | (no ready id; L=1)
+[ZMQ ] received id=156, cached 2073600 bytes
+[PROJ] trig #480 @1903380133485192 ns -> visible_id=-1 | queued next_id=154 (readyQ=0, swappedQ~)
+[CAM ] frame #244 @1903380133497321 ns -> PROJ #480 visible_id=-1 (mapped mask=154)
+[ZMQ ] received id=157, cached 2073600 bytes
+[DRAW] id=154 target_pidx+1=481 draw+swap=5.02797 ms, swappedQ=1
+[PROJ] trig #481 @1903380150170026 ns -> visible_id=154 | (no ready id; L=1)
+[ZMQ ] received id=158, cached 2073600 bytes
+[PROJ] trig #482 @1903380166854060 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #245 @1903380166866572 ns -> PROJ #482 visible_id=-1 (mapped mask=156)
+[ZMQ ] received id=159, cached 2073600 bytes
+[PROJ] trig #483 @1903380183538094 ns -> visible_id=-1 | queued next_id=156 (readyQ=0, swappedQ~)
+[DRAW] id=156 target_pidx+1=484 draw+swap=2.3521 ms, swappedQ=1
+[ZMQ ] received id=160, cached 2073600 bytes
+[PROJ] trig #484 @1903380200221519 ns -> visible_id=156 | queued next_id=158 (readyQ=0, swappedQ~)
+[CAM ] frame #246 @1903380200237072 ns -> PROJ #484 visible_id=156 (mapped mask=158)
+[DRAW] id=158 target_pidx+1=485 draw+swap=3.99386 ms, swappedQ=1
+[ZMQ ] received id=161, cached 2073600 bytes
+[PROJ] trig #485 @1903380216905681 ns -> visible_id=158 | (no ready id; L=1)
+[CAM ] frame #247 @1903380216917041 ns -> PROJ #485 visible_id=158 (mapped mask=160)
+[ZMQ ] received id=162, cached 2073600 bytes
+[PROJ] trig #486 @1903380233589235 ns -> visible_id=-1 | queued next_id=160 (readyQ=1, swappedQ~)
+[CAM ] frame #248 @1903380233601299 ns -> PROJ #486 visible_id=-1 (mapped mask=161)
+[DRAW] id=160 target_pidx+1=487 draw+swap=2.53558 ms, swappedQ=1
+[ZMQ ] received id=163, cached 2073600 bytes
+[PROJ] trig #487 @1903380250272981 ns -> visible_id=160 | queued next_id=161 (readyQ=0, swappedQ~)
+[DRAW] id=161 target_pidx+1=488 draw+swap=2.4984 ms, swappedQ=1
+[ZMQ ] received id=164, cached 2073600 bytes
+[PROJ] trig #488 @1903380266956055 ns -> visible_id=161 | queued next_id=162 (readyQ=0, swappedQ~)
+[CAM ] frame #249 @1903380266967287 ns -> PROJ #488 visible_id=161 (mapped mask=162)
+[DRAW] id=162 target_pidx+1=489 draw+swap=2.74448 ms, swappedQ=1
+[ZMQ ] received id=165, cached 2073600 bytes
+[PROJ] trig #489 @1903380283640600 ns -> visible_id=162 | (no ready id; L=1)
+[ZMQ ] received id=166, cached 2073600 bytes
+[PROJ] trig #490 @1903380300323546 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #250 @1903380300334202 ns -> PROJ #490 visible_id=-1 (mapped mask=164)
+[ZMQ ] received id=167, cached 2073600 bytes
+[PROJ] trig #491 @1903380317012220 ns -> visible_id=-1 | queued next_id=164 (readyQ=0, swappedQ~)
+[DRAW] id=164 target_pidx+1=492 draw+swap=5.32173 ms, swappedQ=1
+[ZMQ ] received id=168, cached 2073600 bytes
+[PROJ] trig #492 @1903380333692798 ns -> visible_id=164 | (no ready id; L=1)
+[CAM ] frame #251 @1903380333704286 ns -> PROJ #492 visible_id=164 (mapped mask=166)
+[ZMQ ] received id=169, cached 2073600 bytes
+[PROJ] trig #493 @1903380350374495 ns -> visible_id=-1 | queued next_id=166 (readyQ=0, swappedQ~)
+[DRAW] id=166 target_pidx+1=494 draw+swap=2.83114 ms, swappedQ=1
+[ZMQ ] received id=170, cached 2073600 bytes
+[PROJ] trig #494 @1903380367059553 ns -> visible_id=166 | (no ready id; L=1)
+[CAM ] frame #252 @1903380367070977 ns -> PROJ #494 visible_id=166 (mapped mask=168)
+[ZMQ ] received id=171, cached 2073600 bytes
+[PROJ] trig #495 @1903380383742211 ns -> visible_id=-1 | queued next_id=168 (readyQ=0, swappedQ~)
+[DRAW] id=168 target_pidx+1=496 draw+swap=2.2393 ms, swappedQ=1
+[ZMQ ] received id=172, cached 2073600 bytes
+[PROJ] trig #496 @1903380400427141 ns -> visible_id=168 | (no ready id; L=1)
+[CAM ] frame #253 @1903380400441957 ns -> PROJ #496 visible_id=168 (mapped mask=170)
+[ZMQ ] received id=173, cached 2073600 bytes
+[PROJ] trig #497 @1903380417110215 ns -> visible_id=-1 | queued next_id=170 (readyQ=0, swappedQ~)
+[DRAW] id=170 target_pidx+1=498 draw+swap=2.26659 ms, swappedQ=1
+[ZMQ ] received id=174, cached 2073600 bytes
+[PROJ] trig #498 @1903380433794632 ns -> visible_id=170 | (no ready id; L=1)
+[CAM ] frame #254 @1903380433807849 ns -> PROJ #498 visible_id=170 (mapped mask=172)
+[ZMQ ] received id=175, cached 2073600 bytes
+[PROJ] trig #499 @1903380450478890 ns -> visible_id=-1 | queued next_id=172 (readyQ=0, swappedQ~)
+[DRAW] id=172 target_pidx+1=500 draw+swap=3.53907 ms, swappedQ=1
+[ZMQ ] received id=176, cached 2073600 bytes
+[PROJ] trig #500 @1903380467162156 ns -> visible_id=172 | (no ready id; L=1)
+[CAM ] frame #255 @1903380467173964 ns -> PROJ #500 visible_id=172 (mapped mask=174)
+[ZMQ ] received id=177, cached 2073600 bytes
+[PROJ] trig #501 @1903380483845198 ns -> visible_id=-1 | queued next_id=174 (readyQ=0, swappedQ~)
+[DRAW] id=174 target_pidx+1=502 draw+swap=2.46506 ms, swappedQ=1
+[ZMQ ] received id=178, cached 2073600 bytes
+[PROJ] trig #502 @1903380500530960 ns -> visible_id=174 | (no ready id; L=1)
+[CAM ] frame #256 @1903380500544976 ns -> PROJ #502 visible_id=174 (mapped mask=176)
+[ZMQ ] received id=179, cached 2073600 bytes
+[PROJ] trig #503 @1903380517214225 ns -> visible_id=-1 | queued next_id=176 (readyQ=0, swappedQ~)
+[DRAW] id=176 target_pidx+1=504 draw+swap=4.31872 ms, swappedQ=1
+[ZMQ ] received id=180, cached 2073600 bytes
+[PROJ] trig #504 @1903380533897491 ns -> visible_id=176 | (no ready id; L=1)
+[CAM ] frame #257 @1903380533915635 ns -> PROJ #504 visible_id=176 (mapped mask=178)
+[ZMQ ] received id=181, cached 2073600 bytes
+[PROJ] trig #505 @1903380550579861 ns -> visible_id=-1 | queued next_id=178 (readyQ=0, swappedQ~)
+[DRAW] id=178 target_pidx+1=506 draw+swap=3.12176 ms, swappedQ=1
+[ZMQ ] received id=182, cached 2073600 bytes
+[PROJ] trig #506 @1903380567264279 ns -> visible_id=178 | (no ready id; L=1)
+[CAM ] frame #258 @1903380567276567 ns -> PROJ #506 visible_id=178 (mapped mask=180)
+[ZMQ ] received id=183, cached 2073600 bytes
+[PROJ] trig #507 @1903380583947512 ns -> visible_id=-1 | queued next_id=180 (readyQ=0, swappedQ~)
+[DRAW] id=180 target_pidx+1=508 draw+swap=3.09162 ms, swappedQ=1
+[ZMQ ] received id=184, cached 2073600 bytes
+[PROJ] trig #508 @1903380600632730 ns -> visible_id=180 | queued next_id=182 (readyQ=0, swappedQ~)
+[CAM ] frame #259 @1903380600644090 ns -> PROJ #508 visible_id=180 (mapped mask=182)
+[DRAW] id=182 target_pidx+1=509 draw+swap=3.74301 ms, swappedQ=1
+[ZMQ ] received id=185, cached 2073600 bytes
+[PROJ] trig #509 @1903380617315676 ns -> visible_id=182 | (no ready id; L=1)
+[ZMQ ] received id=186, cached 2073600 bytes
+[PROJ] trig #510 @1903380633998942 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #260 @1903380634009950 ns -> PROJ #510 visible_id=-1 (mapped mask=184)
+[ZMQ ] received id=187, cached 2073600 bytes
+[PROJ] trig #511 @1903380650682976 ns -> visible_id=-1 | queued next_id=184 (readyQ=0, swappedQ~)
+[DRAW] id=184 target_pidx+1=512 draw+swap=2.94966 ms, swappedQ=1
+[ZMQ ] received id=188, cached 2073600 bytes
+[PROJ] trig #512 @1903380667367521 ns -> visible_id=184 | (no ready id; L=1)
+[CAM ] frame #261 @1903380667379425 ns -> PROJ #512 visible_id=184 (mapped mask=186)
+[ZMQ ] received id=189, cached 2073600 bytes
+[PROJ] trig #513 @1903380684050595 ns -> visible_id=-1 | queued next_id=186 (readyQ=0, swappedQ~)
+[DRAW] id=186 target_pidx+1=514 draw+swap=3.88 ms, swappedQ=1
+[ZMQ ] received id=190, cached 2073600 bytes
+[PROJ] trig #514 @1903380700734469 ns -> visible_id=186 | queued next_id=188 (readyQ=0, swappedQ~)
+[CAM ] frame #262 @1903380700747749 ns -> PROJ #514 visible_id=186 (mapped mask=188)
+[DRAW] id=188 target_pidx+1=515 draw+swap=4.47846 ms, swappedQ=1
+[ZMQ ] received id=191, cached 2073600 bytes
+[PROJ] trig #515 @1903380717417863 ns -> visible_id=188 | (no ready id; L=1)
+[ZMQ ] received id=192, cached 2073600 bytes
+[PROJ] trig #516 @1903380734114889 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #263 @1903380734109801 ns -> PROJ #516 visible_id=-1 (mapped mask=190)
+[ZMQ ] received id=193, cached 2073600 bytes
+[PROJ] trig #517 @1903380750784746 ns -> visible_id=-1 | queued next_id=190 (readyQ=0, swappedQ~)
+[DRAW] id=190 target_pidx+1=518 draw+swap=3.5729 ms, swappedQ=1
+[ZMQ ] received id=194, cached 2073600 bytes
+[PROJ] trig #518 @1903380767469164 ns -> visible_id=190 | (no ready id; L=1)
+[CAM ] frame #264 @1903380767481484 ns -> PROJ #518 visible_id=190 (mapped mask=192)
+[ZMQ ] received id=195, cached 2073600 bytes
+[PROJ] trig #519 @1903380784153198 ns -> visible_id=-1 | queued next_id=192 (readyQ=0, swappedQ~)
+[DRAW] id=192 target_pidx+1=520 draw+swap=3.46838 ms, swappedQ=1
+[ZMQ ] received id=196, cached 2073600 bytes
+[PROJ] trig #520 @1903380800836464 ns -> visible_id=192 | queued next_id=194 (readyQ=0, swappedQ~)
+[CAM ] frame #265 @1903380800848176 ns -> PROJ #520 visible_id=192 (mapped mask=194)
+[DRAW] id=194 target_pidx+1=521 draw+swap=2.40733 ms, swappedQ=1
+[ZMQ ] received id=197, cached 2073600 bytes
+[PROJ] trig #521 @1903380817520177 ns -> visible_id=194 | (no ready id; L=1)
+[ZMQ ] received id=198, cached 2073600 bytes
+[PROJ] trig #522 @1903380834203827 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #266 @1903380834214771 ns -> PROJ #522 visible_id=-1 (mapped mask=196)
+[ZMQ ] received id=199, cached 2073600 bytes
+[PROJ] trig #523 @1903380850887349 ns -> visible_id=-1 | queued next_id=196 (readyQ=0, swappedQ~)
+[DRAW] id=196 target_pidx+1=524 draw+swap=3.20925 ms, swappedQ=1
+[ZMQ ] received id=200, cached 2073600 bytes
+[PROJ] trig #524 @1903380867571511 ns -> visible_id=196 | (no ready id; L=1)
+[CAM ] frame #267 @1903380867583031 ns -> PROJ #524 visible_id=196 (mapped mask=198)
+[ZMQ ] received id=201, cached 2073600 bytes
+[PROJ] trig #525 @1903380884255448 ns -> visible_id=-1 | queued next_id=198 (readyQ=0, swappedQ~)
+[DRAW] id=198 target_pidx+1=526 draw+swap=2.49718 ms, swappedQ=1
+[ZMQ ] received id=202, cached 2073600 bytes
+[PROJ] trig #526 @1903380900939066 ns -> visible_id=198 | (no ready id; L=1)
+[CAM ] frame #268 @1903380900950682 ns -> PROJ #526 visible_id=198 (mapped mask=200)
+[ZMQ ] received id=203, cached 2073600 bytes
+[PROJ] trig #527 @1903380917621692 ns -> visible_id=-1 | queued next_id=200 (readyQ=0, swappedQ~)
+[DRAW] id=200 target_pidx+1=528 draw+swap=3.63018 ms, swappedQ=1
+[ZMQ ] received id=204, cached 2073600 bytes
+[PROJ] trig #528 @1903380934306526 ns -> visible_id=200 | (no ready id; L=1)
+[CAM ] frame #269 @1903380934317566 ns -> PROJ #528 visible_id=200 (mapped mask=202)
+[ZMQ ] received id=205, cached 2073600 bytes
+[PROJ] trig #529 @1903380950991232 ns -> visible_id=-1 | queued next_id=202 (readyQ=0, swappedQ~)
+[DRAW] id=202 target_pidx+1=530 draw+swap=2.34413 ms, swappedQ=1
+[ZMQ ] received id=206, cached 2073600 bytes
+[PROJ] trig #530 @1903380967673857 ns -> visible_id=202 | queued next_id=204 (readyQ=0, swappedQ~)
+[CAM ] frame #270 @1903380967685377 ns -> PROJ #530 visible_id=202 (mapped mask=204)
+[ZMQ ] received id=207, cached 2073600 bytes
+[DRAW] id=204 target_pidx+1=531 draw+swap=6.23805 ms, swappedQ=1
+[PROJ] trig #531 @1903380984357987 ns -> visible_id=204 | (no ready id; L=1)
+[ZMQ ] received id=208, cached 2073600 bytes
+[PROJ] trig #532 @1903381001041349 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #271 @1903381001052965 ns -> PROJ #532 visible_id=-1 (mapped mask=206)
+[ZMQ ] received id=209, cached 2073600 bytes
+[PROJ] trig #533 @1903381017724903 ns -> visible_id=-1 | queued next_id=206 (readyQ=0, swappedQ~)
+[DRAW] id=206 target_pidx+1=534 draw+swap=2.74346 ms, swappedQ=1
+[ZMQ ] received id=210, cached 2073600 bytes
+[PROJ] trig #534 @1903381034410216 ns -> visible_id=206 | queued next_id=208 (readyQ=0, swappedQ~)
+[CAM ] frame #272 @1903381034422057 ns -> PROJ #534 visible_id=206 (mapped mask=208)
+[ZMQ ] received id=211, cached 2073600 bytes
+[DRAW] id=208 target_pidx+1=535 draw+swap=4.71606 ms, swappedQ=1
+[PROJ] trig #535 @1903381051092010 ns -> visible_id=208 | (no ready id; L=1)
+[ZMQ ] received id=212, cached 2073600 bytes
+[CAM ] frame #273 @1903381067787436 ns -> PROJ #536 visible_id=-1 (mapped mask=210)
+[PROJ] trig #536 @1903381067775468 ns -> visible_id=-1 | queued next_id=210 (readyQ=0, swappedQ~)
+[DRAW] id=210 target_pidx+1=537 draw+swap=2.4407 ms, swappedQ=1
+[ZMQ ] received id=213, cached 2073600 bytes
+[PROJ] trig #537 @1903381084459950 ns -> visible_id=210 | (no ready id; L=1)
+[ZMQ ] received id=214, cached 2073600 bytes
+[PROJ] trig #538 @1903381101144464 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #274 @1903381101156880 ns -> PROJ #538 visible_id=-1 (mapped mask=212)
+[ZMQ ] received id=215, cached 2073600 bytes
+[PROJ] trig #539 @1903381117826641 ns -> visible_id=-1 | queued next_id=212 (readyQ=0, swappedQ~)
+[ZMQ ] received id=216, cached 2073600 bytes
+[DRAW] id=212 target_pidx+1=540 draw+swap=4.16397 ms, swappedQ=1
+[CAM ] frame #275 @1903381134525075 ns -> PROJ #540 visible_id=212 (mapped mask=214)
+[PROJ] trig #540 @1903381134512435 ns -> visible_id=212 | queued next_id=214 (readyQ=0, swappedQ~)
+[ZMQ ] received id=217, cached 2073600 bytes
+[DRAW] id=214 target_pidx+1=541 draw+swap=4.31302 ms, swappedQ=1
+[PROJ] trig #541 @1903381151193109 ns -> visible_id=214 | (no ready id; L=1)
+[ZMQ ] received id=218, cached 2073600 bytes
+[CAM ] frame #276 @1903381167888407 ns -> PROJ #542 visible_id=-1 (mapped mask=216)
+[PROJ] trig #542 @1903381167878039 ns -> visible_id=-1 | queued next_id=216 (readyQ=0, swappedQ~)
+[DRAW] id=216 target_pidx+1=543 draw+swap=3.70794 ms, swappedQ=1
+[ZMQ ] received id=219, cached 2073600 bytes
+[PROJ] trig #543 @1903381184563032 ns -> visible_id=216 | (no ready id; L=1)
+[ZMQ ] received id=220, cached 2073600 bytes
+[CAM ] frame #277 @1903381201257114 ns -> PROJ #544 visible_id=-1 (mapped mask=218)
+[PROJ] trig #544 @1903381201246010 ns -> visible_id=-1 | queued next_id=218 (readyQ=0, swappedQ~)
+[DRAW] id=218 target_pidx+1=545 draw+swap=3.13686 ms, swappedQ=1
+[ZMQ ] received id=221, cached 2073600 bytes
+[PROJ] trig #545 @1903381217929788 ns -> visible_id=218 | (no ready id; L=1)
+[ZMQ ] received id=222, cached 2073600 bytes
+[PROJ] trig #546 @1903381234615710 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #278 @1903381234630078 ns -> PROJ #546 visible_id=-1 (mapped mask=220)
+[ZMQ ] received id=223, cached 2073600 bytes
+[PROJ] trig #547 @1903381251296096 ns -> visible_id=-1 | queued next_id=220 (readyQ=0, swappedQ~)
+[DRAW] id=220 target_pidx+1=548 draw+swap=2.74806 ms, swappedQ=1
+[ZMQ ] received id=224, cached 2073600 bytes
+[PROJ] trig #548 @1903381267980513 ns -> visible_id=220 | queued next_id=222 (readyQ=0, swappedQ~)
+[CAM ] frame #279 @1903381267991393 ns -> PROJ #548 visible_id=220 (mapped mask=222)
+[DRAW] id=222 target_pidx+1=549 draw+swap=4.13066 ms, swappedQ=1
+[ZMQ ] received id=225, cached 2073600 bytes
+[PROJ] trig #549 @1903381284663715 ns -> visible_id=222 | (no ready id; L=1)
+[ZMQ ] received id=226, cached 2073600 bytes
+[CAM ] frame #280 @1903381301359109 ns -> PROJ #550 visible_id=-1 (mapped mask=224)
+[PROJ] trig #550 @1903381301348005 ns -> visible_id=-1 | queued next_id=224 (readyQ=0, swappedQ~)
+[DRAW] id=224 target_pidx+1=551 draw+swap=3.46755 ms, swappedQ=1
+[ZMQ ] received id=227, cached 2073600 bytes
+[PROJ] trig #551 @1903381318030311 ns -> visible_id=224 | (no ready id; L=1)
+[ZMQ ] received id=228, cached 2073600 bytes
+[CAM ] frame #281 @1903381334956844 ns -> PROJ #551 visible_id=224 (mapped mask=226)
+[PROJ] trig #552 @1903381334962476 ns -> visible_id=-1 | queued next_id=226 (readyQ=0, swappedQ~)
+[DRAW] id=226 target_pidx+1=553 draw+swap=2.37446 ms, swappedQ=1
+[ZMQ ] received id=229, cached 2073600 bytes
+[PROJ] trig #553 @1903381351400746 ns -> visible_id=226 | (no ready id; L=1)
+[ZMQ ] received id=230, cached 2073600 bytes
+[PROJ] trig #554 @1903381368083116 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #282 @1903381368094412 ns -> PROJ #554 visible_id=-1 (mapped mask=228)
+[ZMQ ] received id=231, cached 2073600 bytes
+[PROJ] trig #555 @1903381384768046 ns -> visible_id=-1 | queued next_id=228 (readyQ=0, swappedQ~)
+[DRAW] id=228 target_pidx+1=556 draw+swap=2.44147 ms, swappedQ=1
+[ZMQ ] received id=232, cached 2073600 bytes
+[PROJ] trig #556 @1903381401451088 ns -> visible_id=228 | (no ready id; L=1)
+[CAM ] frame #283 @1903381401462480 ns -> PROJ #556 visible_id=228 (mapped mask=230)
+[ZMQ ] received id=233, cached 2073600 bytes
+[PROJ] trig #557 @1903381418134417 ns -> visible_id=-1 | queued next_id=230 (readyQ=0, swappedQ~)
+[DRAW] id=230 target_pidx+1=558 draw+swap=2.5928 ms, swappedQ=1
+[ZMQ ] received id=234, cached 2073600 bytes
+[PROJ] trig #558 @1903381434818227 ns -> visible_id=230 | (no ready id; L=1)
+[CAM ] frame #284 @1903381434828883 ns -> PROJ #558 visible_id=230 (mapped mask=232)
+[ZMQ ] received id=235, cached 2073600 bytes
+[PROJ] trig #559 @1903381451502389 ns -> visible_id=-1 | queued next_id=232 (readyQ=0, swappedQ~)
+[DRAW] id=232 target_pidx+1=560 draw+swap=2.73418 ms, swappedQ=1
+[ZMQ ] received id=236, cached 2073600 bytes
+[PROJ] trig #560 @1903381468185911 ns -> visible_id=232 | (no ready id; L=1)
+[CAM ] frame #285 @1903381468197591 ns -> PROJ #560 visible_id=232 (mapped mask=234)
+[ZMQ ] received id=237, cached 2073600 bytes
+[PROJ] trig #561 @1903381484871096 ns -> visible_id=-1 | queued next_id=234 (readyQ=0, swappedQ~)
+[DRAW] id=234 target_pidx+1=562 draw+swap=3.03776 ms, swappedQ=1
+[ZMQ ] received id=238, cached 2073600 bytes
+[PROJ] trig #562 @1903381501554330 ns -> visible_id=234 | (no ready id; L=1)
+[CAM ] frame #286 @1903381501566458 ns -> PROJ #562 visible_id=234 (mapped mask=236)
+[ZMQ ] received id=239, cached 2073600 bytes
+[PROJ] trig #563 @1903381518238716 ns -> visible_id=-1 | queued next_id=236 (readyQ=0, swappedQ~)
+[DRAW] id=236 target_pidx+1=564 draw+swap=2.5768 ms, swappedQ=1
+[ZMQ ] received id=240, cached 2073600 bytes
+[PROJ] trig #564 @1903381534919998 ns -> visible_id=236 | (no ready id; L=1)
+[CAM ] frame #287 @1903381534930782 ns -> PROJ #564 visible_id=236 (mapped mask=238)
+[ZMQ ] received id=241, cached 2073600 bytes
+[PROJ] trig #565 @1903381551604992 ns -> visible_id=-1 | queued next_id=238 (readyQ=0, swappedQ~)
+[DRAW] id=238 target_pidx+1=566 draw+swap=2.47818 ms, swappedQ=1
+[ZMQ ] received id=242, cached 2073600 bytes
+[PROJ] trig #566 @1903381568287073 ns -> visible_id=238 | queued next_id=240 (readyQ=0, swappedQ~)
+[CAM ] frame #288 @1903381568298049 ns -> PROJ #566 visible_id=238 (mapped mask=240)
+[ZMQ ] received id=243, cached 2073600 bytes
+[DRAW] id=240 target_pidx+1=567 draw+swap=6.89632 ms, swappedQ=1
+[PROJ] trig #567 @1903381584971843 ns -> visible_id=240 | (no ready id; L=1)
+[ZMQ ] received id=244, cached 2073600 bytes
+[PROJ] trig #568 @1903381601653349 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #289 @1903381601664485 ns -> PROJ #568 visible_id=-1 (mapped mask=242)
+[ZMQ ] received id=245, cached 2073600 bytes
+[PROJ] trig #569 @1903381618337671 ns -> visible_id=-1 | queued next_id=242 (readyQ=0, swappedQ~)
+[DRAW] id=242 target_pidx+1=570 draw+swap=5.36029 ms, swappedQ=1
+[ZMQ ] received id=246, cached 2073600 bytes
+[PROJ] trig #570 @1903381635024424 ns -> visible_id=242 | (no ready id; L=1)
+[CAM ] frame #290 @1903381635037065 ns -> PROJ #570 visible_id=242 (mapped mask=244)
+[ZMQ ] received id=247, cached 2073600 bytes
+[PROJ] trig #571 @1903381651706602 ns -> visible_id=-1 | queued next_id=244 (readyQ=0, swappedQ~)
+[DRAW] id=244 target_pidx+1=572 draw+swap=2.73322 ms, swappedQ=1
+[ZMQ ] received id=248, cached 2073600 bytes
+[PROJ] trig #572 @1903381668391180 ns -> visible_id=244 | queued next_id=246 (readyQ=0, swappedQ~)
+[CAM ] frame #291 @1903381668403404 ns -> PROJ #572 visible_id=244 (mapped mask=246)
+[ZMQ ] received id=249, cached 2073600 bytes
+[DRAW] id=246 target_pidx+1=573 draw+swap=7.49526 ms, swappedQ=1
+[PROJ] trig #573 @1903381685074414 ns -> visible_id=246 | (no ready id; L=1)
+[ZMQ ] received id=250, cached 2073600 bytes
+[CAM ] frame #292 @1903381701769360 ns -> PROJ #574 visible_id=-1 (mapped mask=248)
+[PROJ] trig #574 @1903381701758736 ns -> visible_id=-1 | queued next_id=248 (readyQ=0, swappedQ~)
+[DRAW] id=248 target_pidx+1=575 draw+swap=2.7567 ms, swappedQ=1
+[ZMQ ] received id=251, cached 2073600 bytes
+[PROJ] trig #575 @1903381718442993 ns -> visible_id=248 | (no ready id; L=1)
+[ZMQ ] received id=252, cached 2073600 bytes
+[PROJ] trig #576 @1903381735126355 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #293 @1903381735137811 ns -> PROJ #576 visible_id=-1 (mapped mask=250)
+[ZMQ ] received id=253, cached 2073600 bytes
+[PROJ] trig #577 @1903381751809333 ns -> visible_id=-1 | queued next_id=250 (readyQ=0, swappedQ~)
+[DRAW] id=250 target_pidx+1=578 draw+swap=2.41766 ms, swappedQ=1
+[ZMQ ] received id=254, cached 2073600 bytes
+[PROJ] trig #578 @1903381768494743 ns -> visible_id=250 | queued next_id=252 (readyQ=0, swappedQ~)
+[CAM ] frame #294 @1903381768506103 ns -> PROJ #578 visible_id=250 (mapped mask=252)
+[ZMQ ] received id=255, cached 2073600 bytes
+[DRAW] id=252 target_pidx+1=579 draw+swap=4.20128 ms, swappedQ=1
+[PROJ] trig #579 @1903381785179928 ns -> visible_id=252 | (no ready id; L=1)
+[ZMQ ] received id=256, cached 2073600 bytes
+[PROJ] trig #580 @1903381801859866 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #295 @1903381801871642 ns -> PROJ #580 visible_id=-1 (mapped mask=254)
+[ZMQ ] received id=257, cached 2073600 bytes
+[PROJ] trig #581 @1903381818544508 ns -> visible_id=-1 | queued next_id=254 (readyQ=0, swappedQ~)
+[DRAW] id=254 target_pidx+1=582 draw+swap=2.58003 ms, swappedQ=1
+[ZMQ ] received id=258, cached 2073600 bytes
+[PROJ] trig #582 @1903381835229822 ns -> visible_id=254 | (no ready id; L=1)
+[CAM ] frame #296 @1903381835242014 ns -> PROJ #582 visible_id=254 (mapped mask=256)
+[ZMQ ] received id=259, cached 2073600 bytes
+[PROJ] trig #583 @1903381851910975 ns -> visible_id=-1 | queued next_id=256 (readyQ=0, swappedQ~)
+[DRAW] id=256 target_pidx+1=584 draw+swap=3.66365 ms, swappedQ=1
+[ZMQ ] received id=260, cached 2073600 bytes
+[PROJ] trig #584 @1903381868596225 ns -> visible_id=256 | (no ready id; L=1)
+[CAM ] frame #297 @1903381868608801 ns -> PROJ #584 visible_id=256 (mapped mask=258)
+[ZMQ ] received id=261, cached 2073600 bytes
+[PROJ] trig #585 @1903381885278499 ns -> visible_id=-1 | queued next_id=258 (readyQ=0, swappedQ~)
+[DRAW] id=258 target_pidx+1=586 draw+swap=3.43286 ms, swappedQ=1
+[ZMQ ] received id=262, cached 2073600 bytes
+[PROJ] trig #586 @1903381901964581 ns -> visible_id=258 | (no ready id; L=1)
+[CAM ] frame #298 @1903381901977253 ns -> PROJ #586 visible_id=258 (mapped mask=260)
+[ZMQ ] received id=263, cached 2073600 bytes
+[PROJ] trig #587 @1903381918647111 ns -> visible_id=-1 | queued next_id=260 (readyQ=0, swappedQ~)
+[DRAW] id=260 target_pidx+1=588 draw+swap=3.73411 ms, swappedQ=1
+[ZMQ ] received id=264, cached 2073600 bytes
+[PROJ] trig #588 @1903381935333544 ns -> visible_id=260 | (no ready id; L=1)
+[CAM ] frame #299 @1903381935347817 ns -> PROJ #588 visible_id=260 (mapped mask=262)
+[ZMQ ] received id=265, cached 2073600 bytes
+[PROJ] trig #589 @1903381952014698 ns -> visible_id=-1 | queued next_id=262 (readyQ=0, swappedQ~)
+[ZMQ ] received id=266, cached 2073600 bytes
+[DRAW] id=262 target_pidx+1=590 draw+swap=5.66237 ms, swappedQ=1
+[PROJ] trig #590 @1903381968700204 ns -> visible_id=262 | (no ready id; L=1)
+[CAM ] frame #300 @1903381968712588 ns -> PROJ #590 visible_id=262 (mapped mask=264)
+[ZMQ ] received id=267, cached 2073600 bytes
+[PROJ] trig #591 @1903381985382350 ns -> visible_id=-1 | queued next_id=264 (readyQ=0, swappedQ~)
+[DRAW] id=264 target_pidx+1=592 draw+swap=2.87293 ms, swappedQ=1
+[ZMQ ] received id=268, cached 2073600 bytes
+[PROJ] trig #592 @1903382002066287 ns -> visible_id=264 | queued next_id=266 (readyQ=0, swappedQ~)
+[CAM ] frame #301 @1903382002087472 ns -> PROJ #592 visible_id=264 (mapped mask=266)
+[DRAW] id=266 target_pidx+1=593 draw+swap=2.66954 ms, swappedQ=1
+[ZMQ ] received id=269, cached 2073600 bytes
+[PROJ] trig #593 @1903382018749713 ns -> visible_id=266 | (no ready id; L=1)
+[CAM ] frame #302 @1903382018763281 ns -> PROJ #593 visible_id=266 (mapped mask=268)
+[ZMQ ] received id=270, cached 2073600 bytes
+[PROJ] trig #594 @1903382035434003 ns -> visible_id=-1 | queued next_id=268 (readyQ=1, swappedQ~)
+[CAM ] frame #303 @1903382035446899 ns -> PROJ #594 visible_id=-1 (mapped mask=269)
+[DRAW] id=268 target_pidx+1=595 draw+swap=3.02749 ms, swappedQ=1
+[ZMQ ] received id=271, cached 2073600 bytes
+[PROJ] trig #595 @1903382052114901 ns -> visible_id=268 | queued next_id=269 (readyQ=0, swappedQ~)
+[ZMQ ] received id=272, cached 2073600 bytes
+[DRAW] id=269 target_pidx+1=596 draw+swap=3.75331 ms, swappedQ=1
+[PROJ] trig #596 @1903382068802231 ns -> visible_id=269 | queued next_id=270 (readyQ=0, swappedQ~)
+[CAM ] frame #304 @1903382068818391 ns -> PROJ #596 visible_id=269 (mapped mask=270)
+[ZMQ ] received id=273, cached 2073600 bytes
+[DRAW] id=270 target_pidx+1=597 draw+swap=4.02474 ms, swappedQ=1
+[PROJ] trig #597 @1903382085484696 ns -> visible_id=270 | (no ready id; L=1)
+[ZMQ ] received id=274, cached 2073600 bytes
+[PROJ] trig #598 @1903382102169850 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #305 @1903382102182842 ns -> PROJ #598 visible_id=-1 (mapped mask=272)
+[ZMQ ] received id=275, cached 2073600 bytes
+[PROJ] trig #599 @1903382118852092 ns -> visible_id=-1 | queued next_id=272 (readyQ=0, swappedQ~)
+[DRAW] id=272 target_pidx+1=600 draw+swap=2.92816 ms, swappedQ=1
+[ZMQ ] received id=276, cached 2073600 bytes
+[PROJ] trig #600 @1903382135534942 ns -> visible_id=272 | queued next_id=274 (readyQ=0, swappedQ~)
+[CAM ] frame #306 @1903382135545438 ns -> PROJ #600 visible_id=272 (mapped mask=274)
+[ZMQ ] received id=277, cached 2073600 bytes
+[DRAW] id=274 target_pidx+1=601 draw+swap=3.8688 ms, swappedQ=1
+[PROJ] trig #601 @1903382152219999 ns -> visible_id=274 | (no ready id; L=1)
+[ZMQ ] received id=278, cached 2073600 bytes
+[PROJ] trig #602 @1903382168902817 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #307 @1903382168913441 ns -> PROJ #602 visible_id=-1 (mapped mask=276)
+[ZMQ ] received id=279, cached 2073600 bytes
+[PROJ] trig #603 @1903382185586531 ns -> visible_id=-1 | queued next_id=276 (readyQ=0, swappedQ~)
+[DRAW] id=276 target_pidx+1=604 draw+swap=2.69354 ms, swappedQ=1
+[ZMQ ] received id=280, cached 2073600 bytes
+[PROJ] trig #604 @1903382202271749 ns -> visible_id=276 | (no ready id; L=1)
+[CAM ] frame #308 @1903382202284037 ns -> PROJ #604 visible_id=276 (mapped mask=278)
+[ZMQ ] received id=281, cached 2073600 bytes
+[PROJ] trig #605 @1903382218952743 ns -> visible_id=-1 | queued next_id=278 (readyQ=0, swappedQ~)
+[DRAW] id=278 target_pidx+1=606 draw+swap=2.36867 ms, swappedQ=1
+[ZMQ ] received id=282, cached 2073600 bytes
+[PROJ] trig #606 @1903382235638984 ns -> visible_id=278 | (no ready id; L=1)
+[CAM ] frame #309 @1903382235651401 ns -> PROJ #606 visible_id=278 (mapped mask=280)
+[ZMQ ] received id=283, cached 2073600 bytes
+[PROJ] trig #607 @1903382252319690 ns -> visible_id=-1 | queued next_id=280 (readyQ=0, swappedQ~)
+[DRAW] id=280 target_pidx+1=608 draw+swap=2.32643 ms, swappedQ=1
+[ZMQ ] received id=284, cached 2073600 bytes
+[PROJ] trig #608 @1903382269005708 ns -> visible_id=280 | (no ready id; L=1)
+[CAM ] frame #310 @1903382269024012 ns -> PROJ #608 visible_id=280 (mapped mask=282)
+[ZMQ ] received id=285, cached 2073600 bytes
+[PROJ] trig #609 @1903382285689134 ns -> visible_id=-1 | queued next_id=282 (readyQ=0, swappedQ~)
+[DRAW] id=282 target_pidx+1=610 draw+swap=2.72317 ms, swappedQ=1
+[ZMQ ] received id=286, cached 2073600 bytes
+[PROJ] trig #610 @1903382302373135 ns -> visible_id=282 | (no ready id; L=1)
+[CAM ] frame #311 @1903382302384784 ns -> PROJ #610 visible_id=282 (mapped mask=284)
+[ZMQ ] received id=287, cached 2073600 bytes
+[PROJ] trig #611 @1903382319054641 ns -> visible_id=-1 | queued next_id=284 (readyQ=0, swappedQ~)
+[DRAW] id=284 target_pidx+1=612 draw+swap=2.35878 ms, swappedQ=1
+[ZMQ ] received id=288, cached 2073600 bytes
+[PROJ] trig #612 @1903382335740179 ns -> visible_id=284 | (no ready id; L=1)
+[CAM ] frame #312 @1903382335752691 ns -> PROJ #612 visible_id=284 (mapped mask=286)
+[ZMQ ] received id=289, cached 2073600 bytes
+[PROJ] trig #613 @1903382352426997 ns -> visible_id=-1 | queued next_id=286 (readyQ=0, swappedQ~)
+[DRAW] id=286 target_pidx+1=614 draw+swap=2.3392 ms, swappedQ=1
+[ZMQ ] received id=290, cached 2073600 bytes
+[PROJ] trig #614 @1903382369108311 ns -> visible_id=286 | queued next_id=288 (readyQ=0, swappedQ~)
+[CAM ] frame #313 @1903382369120343 ns -> PROJ #614 visible_id=286 (mapped mask=288)
+[DRAW] id=288 target_pidx+1=615 draw+swap=2.29603 ms, swappedQ=1
+[ZMQ ] received id=291, cached 2073600 bytes
+[PROJ] trig #615 @1903382385791608 ns -> visible_id=288 | (no ready id; L=1)
+[ZMQ ] received id=292, cached 2073600 bytes
+[PROJ] trig #616 @1903382402476026 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #314 @1903382402486970 ns -> PROJ #616 visible_id=-1 (mapped mask=290)
+[ZMQ ] received id=293, cached 2073600 bytes
+[PROJ] trig #617 @1903382419159292 ns -> visible_id=-1 | queued next_id=290 (readyQ=0, swappedQ~)
+[DRAW] id=290 target_pidx+1=618 draw+swap=2.31456 ms, swappedQ=1
+[ZMQ ] received id=294, cached 2073600 bytes
+[PROJ] trig #618 @1903382435843678 ns -> visible_id=290 | (no ready id; L=1)
+[CAM ] frame #315 @1903382435854942 ns -> PROJ #618 visible_id=290 (mapped mask=292)
+[ZMQ ] received id=295, cached 2073600 bytes
+[PROJ] trig #619 @1903382452528031 ns -> visible_id=-1 | queued next_id=292 (readyQ=0, swappedQ~)
+[ZMQ ] received id=296, cached 2073600 bytes
+[DRAW] id=292 target_pidx+1=620 draw+swap=5.06672 ms, swappedQ=1
+[PROJ] trig #620 @1903382469211233 ns -> visible_id=292 | (no ready id; L=1)
+[CAM ] frame #316 @1903382469224353 ns -> PROJ #620 visible_id=292 (mapped mask=294)
+[ZMQ ] received id=297, cached 2073600 bytes
+[PROJ] trig #621 @1903382485895267 ns -> visible_id=-1 | queued next_id=294 (readyQ=0, swappedQ~)
+[DRAW] id=294 target_pidx+1=622 draw+swap=2.78019 ms, swappedQ=1
+[ZMQ ] received id=298, cached 2073600 bytes
+[PROJ] trig #622 @1903382502577957 ns -> visible_id=294 | (no ready id; L=1)
+[CAM ] frame #317 @1903382502592357 ns -> PROJ #622 visible_id=294 (mapped mask=296)
+[ZMQ ] received id=299, cached 2073600 bytes
+[PROJ] trig #623 @1903382519261671 ns -> visible_id=-1 | queued next_id=296 (readyQ=0, swappedQ~)
+[DRAW] id=296 target_pidx+1=624 draw+swap=2.36141 ms, swappedQ=1
+[ZMQ ] received id=300, cached 2073600 bytes
+[PROJ] trig #624 @1903382535945480 ns -> visible_id=296 | (no ready id; L=1)
+[CAM ] frame #318 @1903382535961097 ns -> PROJ #624 visible_id=296 (mapped mask=298)
+[ZMQ ] received id=301, cached 2073600 bytes
+[PROJ] trig #625 @1903382552628714 ns -> visible_id=-1 | queued next_id=298 (readyQ=0, swappedQ~)
+[DRAW] id=298 target_pidx+1=626 draw+swap=2.27414 ms, swappedQ=1
+[ZMQ ] received id=302, cached 2073600 bytes
+[PROJ] trig #626 @1903382569313260 ns -> visible_id=298 | (no ready id; L=1)
+[CAM ] frame #319 @1903382569325196 ns -> PROJ #626 visible_id=298 (mapped mask=300)
+[ZMQ ] received id=303, cached 2073600 bytes
+[PROJ] trig #627 @1903382585998606 ns -> visible_id=-1 | queued next_id=300 (readyQ=0, swappedQ~)
+[DRAW] id=300 target_pidx+1=628 draw+swap=2.40368 ms, swappedQ=1
+[ZMQ ] received id=304, cached 2073600 bytes
+[PROJ] trig #628 @1903382602681071 ns -> visible_id=300 | (no ready id; L=1)
+[CAM ] frame #320 @1903382602694736 ns -> PROJ #628 visible_id=300 (mapped mask=302)
+[ZMQ ] received id=305, cached 2073600 bytes
+[PROJ] trig #629 @1903382619364337 ns -> visible_id=-1 | queued next_id=302 (readyQ=0, swappedQ~)
+[ZMQ ] received id=306, cached 2073600 bytes
+[DRAW] id=302 target_pidx+1=630 draw+swap=3.45757 ms, swappedQ=1
+[PROJ] trig #630 @1903382636047891 ns -> visible_id=302 | (no ready id; L=1)
+[CAM ] frame #321 @1903382636058771 ns -> PROJ #630 visible_id=302 (mapped mask=304)
+[ZMQ ] received id=307, cached 2073600 bytes
+[PROJ] trig #631 @1903382652731541 ns -> visible_id=-1 | queued next_id=304 (readyQ=0, swappedQ~)
+[DRAW] id=304 target_pidx+1=632 draw+swap=2.90659 ms, swappedQ=1
+[ZMQ ] received id=308, cached 2073600 bytes
+[PROJ] trig #632 @1903382669419383 ns -> visible_id=304 | (no ready id; L=1)
+[CAM ] frame #322 @1903382669432951 ns -> PROJ #632 visible_id=304 (mapped mask=306)
+[ZMQ ] received id=309, cached 2073600 bytes
+[PROJ] trig #633 @1903382686102616 ns -> visible_id=-1 | queued next_id=306 (readyQ=0, swappedQ~)
+[DRAW] id=306 target_pidx+1=634 draw+swap=2.47613 ms, swappedQ=1
+[ZMQ ] received id=310, cached 2073600 bytes
+[PROJ] trig #634 @1903382702784218 ns -> visible_id=306 | (no ready id; L=1)
+[CAM ] frame #323 @1903382702796666 ns -> PROJ #634 visible_id=306 (mapped mask=308)
+[ZMQ ] received id=311, cached 2073600 bytes
+[PROJ] trig #635 @1903382719466236 ns -> visible_id=-1 | queued next_id=308 (readyQ=0, swappedQ~)
+[DRAW] id=308 target_pidx+1=636 draw+swap=2.42176 ms, swappedQ=1
+[ZMQ ] received id=312, cached 2073600 bytes
+[PROJ] trig #636 @1903382736151358 ns -> visible_id=308 | (no ready id; L=1)
+[CAM ] frame #324 @1903382736163870 ns -> PROJ #636 visible_id=308 (mapped mask=310)
+[ZMQ ] received id=313, cached 2073600 bytes
+[PROJ] trig #637 @1903382752833791 ns -> visible_id=-1 | queued next_id=310 (readyQ=0, swappedQ~)
+[DRAW] id=310 target_pidx+1=638 draw+swap=3.43475 ms, swappedQ=1
+[ZMQ ] received id=314, cached 2073600 bytes
+[PROJ] trig #638 @1903382769518209 ns -> visible_id=310 | (no ready id; L=1)
+[CAM ] frame #325 @1903382769530113 ns -> PROJ #638 visible_id=310 (mapped mask=312)
+[ZMQ ] received id=315, cached 2073600 bytes
+[PROJ] trig #639 @1903382786200803 ns -> visible_id=-1 | queued next_id=312 (readyQ=0, swappedQ~)
+[DRAW] id=312 target_pidx+1=640 draw+swap=2.29558 ms, swappedQ=1
+[ZMQ ] received id=316, cached 2073600 bytes
+[PROJ] trig #640 @1903382802885509 ns -> visible_id=312 | (no ready id; L=1)
+[CAM ] frame #326 @1903382802901189 ns -> PROJ #640 visible_id=312 (mapped mask=314)
+[ZMQ ] received id=317, cached 2073600 bytes
+[PROJ] trig #641 @1903382819569383 ns -> visible_id=-1 | queued next_id=314 (readyQ=0, swappedQ~)
+[DRAW] id=314 target_pidx+1=642 draw+swap=2.38547 ms, swappedQ=1
+[ZMQ ] received id=318, cached 2073600 bytes
+[PROJ] trig #642 @1903382836253768 ns -> visible_id=314 | (no ready id; L=1)
+[CAM ] frame #327 @1903382836265672 ns -> PROJ #642 visible_id=314 (mapped mask=316)
+[ZMQ ] received id=319, cached 2073600 bytes
+[PROJ] trig #643 @1903382852936010 ns -> visible_id=-1 | queued next_id=316 (readyQ=0, swappedQ~)
+[ZMQ ] received id=320, cached 2073600 bytes
+[DRAW] id=316 target_pidx+1=644 draw+swap=3.49565 ms, swappedQ=1
+[PROJ] trig #644 @1903382869621100 ns -> visible_id=316 | (no ready id; L=1)
+[CAM ] frame #328 @1903382869631660 ns -> PROJ #644 visible_id=316 (mapped mask=318)
+[ZMQ ] received id=321, cached 2073600 bytes
+[PROJ] trig #645 @1903382886303854 ns -> visible_id=-1 | queued next_id=318 (readyQ=0, swappedQ~)
+[DRAW] id=318 target_pidx+1=646 draw+swap=2.41389 ms, swappedQ=1
+[ZMQ ] received id=322, cached 2073600 bytes
+[PROJ] trig #646 @1903382902990927 ns -> visible_id=318 | (no ready id; L=1)
+[CAM ] frame #329 @1903382903003600 ns -> PROJ #646 visible_id=318 (mapped mask=320)
+[ZMQ ] received id=323, cached 2073600 bytes
+[PROJ] trig #647 @1903382919673681 ns -> visible_id=-1 | queued next_id=320 (readyQ=0, swappedQ~)
+[DRAW] id=320 target_pidx+1=648 draw+swap=2.44454 ms, swappedQ=1
+[ZMQ ] received id=324, cached 2073600 bytes
+[PROJ] trig #648 @1903382936355955 ns -> visible_id=320 | (no ready id; L=1)
+[CAM ] frame #330 @1903382936367731 ns -> PROJ #648 visible_id=320 (mapped mask=322)
+[ZMQ ] received id=325, cached 2073600 bytes
+[PROJ] trig #649 @1903382953039253 ns -> visible_id=-1 | queued next_id=322 (readyQ=0, swappedQ~)
+[DRAW] id=322 target_pidx+1=650 draw+swap=2.24227 ms, swappedQ=1
+[ZMQ ] received id=326, cached 2073600 bytes
+[PROJ] trig #650 @1903382969723479 ns -> visible_id=322 | (no ready id; L=1)
+[CAM ] frame #331 @1903382969735031 ns -> PROJ #650 visible_id=322 (mapped mask=324)
+[ZMQ ] received id=327, cached 2073600 bytes
+[PROJ] trig #651 @1903382986408216 ns -> visible_id=-1 | queued next_id=324 (readyQ=0, swappedQ~)
+[DRAW] id=324 target_pidx+1=652 draw+swap=2.39446 ms, swappedQ=1
+[ZMQ ] received id=328, cached 2073600 bytes
+[PROJ] trig #652 @1903383003091994 ns -> visible_id=324 | (no ready id; L=1)
+[CAM ] frame #332 @1903383003104026 ns -> PROJ #652 visible_id=324 (mapped mask=326)
+[ZMQ ] received id=329, cached 2073600 bytes
+[PROJ] trig #653 @1903383019774940 ns -> visible_id=-1 | queued next_id=326 (readyQ=0, swappedQ~)
+[DRAW] id=326 target_pidx+1=654 draw+swap=2.23309 ms, swappedQ=1
+[ZMQ ] received id=330, cached 2073600 bytes
+[PROJ] trig #654 @1903383036458078 ns -> visible_id=326 | (no ready id; L=1)
+[CAM ] frame #333 @1903383036469726 ns -> PROJ #654 visible_id=326 (mapped mask=328)
+[ZMQ ] received id=331, cached 2073600 bytes
+[PROJ] trig #655 @1903383053141599 ns -> visible_id=-1 | queued next_id=328 (readyQ=0, swappedQ~)
+[ZMQ ] received id=332, cached 2073600 bytes
+[DRAW] id=328 target_pidx+1=656 draw+swap=5.73875 ms, swappedQ=1
+[PROJ] trig #656 @1903383069827585 ns -> visible_id=328 | (no ready id; L=1)
+[CAM ] frame #334 @1903383069840449 ns -> PROJ #656 visible_id=328 (mapped mask=330)
+[ZMQ ] received id=333, cached 2073600 bytes
+[PROJ] trig #657 @1903383086508515 ns -> visible_id=-1 | queued next_id=330 (readyQ=0, swappedQ~)
+[DRAW] id=330 target_pidx+1=658 draw+swap=2.30426 ms, swappedQ=1
+[ZMQ ] received id=334, cached 2073600 bytes
+[PROJ] trig #658 @1903383103192933 ns -> visible_id=330 | (no ready id; L=1)
+[CAM ] frame #335 @1903383103205061 ns -> PROJ #658 visible_id=330 (mapped mask=332)
+[ZMQ ] received id=335, cached 2073600 bytes
+[PROJ] trig #659 @1903383119876038 ns -> visible_id=-1 | queued next_id=332 (readyQ=0, swappedQ~)
+[DRAW] id=332 target_pidx+1=660 draw+swap=2.2385 ms, swappedQ=1
+[ZMQ ] received id=336, cached 2073600 bytes
+[PROJ] trig #660 @1903383136562152 ns -> visible_id=332 | (no ready id; L=1)
+[CAM ] frame #336 @1903383136575080 ns -> PROJ #660 visible_id=332 (mapped mask=334)
+[ZMQ ] received id=337, cached 2073600 bytes
+[PROJ] trig #661 @1903383153244202 ns -> visible_id=-1 | queued next_id=334 (readyQ=0, swappedQ~)
+[DRAW] id=334 target_pidx+1=662 draw+swap=2.26214 ms, swappedQ=1
+[ZMQ ] received id=338, cached 2073600 bytes
+[PROJ] trig #662 @1903383169929548 ns -> visible_id=334 | (no ready id; L=1)
+[CAM ] frame #337 @1903383169946572 ns -> PROJ #662 visible_id=334 (mapped mask=336)
+[ZMQ ] received id=339, cached 2073600 bytes
+[PROJ] trig #663 @1903383186610382 ns -> visible_id=-1 | queued next_id=336 (readyQ=0, swappedQ~)
+[DRAW] id=336 target_pidx+1=664 draw+swap=2.44586 ms, swappedQ=1
+[ZMQ ] received id=340, cached 2073600 bytes
+[PROJ] trig #664 @1903383203294735 ns -> visible_id=336 | (no ready id; L=1)
+[CAM ] frame #338 @1903383203306927 ns -> PROJ #664 visible_id=336 (mapped mask=338)
+[ZMQ ] received id=341, cached 2073600 bytes
+[PROJ] trig #665 @1903383219979985 ns -> visible_id=-1 | queued next_id=338 (readyQ=0, swappedQ~)
+[ZMQ ] received id=342, cached 2073600 bytes
+[DRAW] id=338 target_pidx+1=666 draw+swap=5.08179 ms, swappedQ=1
+[PROJ] trig #666 @1903383236663123 ns -> visible_id=338 | (no ready id; L=1)
+[CAM ] frame #339 @1903383236677395 ns -> PROJ #666 visible_id=338 (mapped mask=340)
+[ZMQ ] received id=343, cached 2073600 bytes
+[PROJ] trig #667 @1903383253346741 ns -> visible_id=-1 | queued next_id=340 (readyQ=0, swappedQ~)
+[ZMQ ] received id=344, cached 2073600 bytes
+[DRAW] id=340 target_pidx+1=668 draw+swap=4.09306 ms, swappedQ=1
+[PROJ] trig #668 @1903383270030710 ns -> visible_id=340 | (no ready id; L=1)
+[CAM ] frame #340 @1903383270042935 ns -> PROJ #668 visible_id=340 (mapped mask=342)
+[ZMQ ] received id=345, cached 2073600 bytes
+[PROJ] trig #669 @1903383286714328 ns -> visible_id=-1 | queued next_id=342 (readyQ=0, swappedQ~)
+[ZMQ ] received id=346, cached 2073600 bytes
+[DRAW] id=342 target_pidx+1=670 draw+swap=3.50045 ms, swappedQ=1
+[PROJ] trig #670 @1903383303398010 ns -> visible_id=342 | (no ready id; L=1)
+[CAM ] frame #341 @1903383303409210 ns -> PROJ #670 visible_id=342 (mapped mask=344)
+[ZMQ ] received id=347, cached 2073600 bytes
+[PROJ] trig #671 @1903383320081628 ns -> visible_id=-1 | queued next_id=344 (readyQ=0, swappedQ~)
+[ZMQ ] received id=348, cached 2073600 bytes
+[DRAW] id=344 target_pidx+1=672 draw+swap=3.9193 ms, swappedQ=1
+[PROJ] trig #672 @1903383336764222 ns -> visible_id=344 | (no ready id; L=1)
+[CAM ] frame #342 @1903383336776958 ns -> PROJ #672 visible_id=344 (mapped mask=346)
+[ZMQ ] received id=349, cached 2073600 bytes
+[PROJ] trig #673 @1903383353447807 ns -> visible_id=-1 | queued next_id=346 (readyQ=0, swappedQ~)
+[ZMQ ] received id=350, cached 2073600 bytes
+[DRAW] id=346 target_pidx+1=674 draw+swap=3.64195 ms, swappedQ=1
+[PROJ] trig #674 @1903383370132385 ns -> visible_id=346 | (no ready id; L=1)
+[CAM ] frame #343 @1903383370146689 ns -> PROJ #674 visible_id=346 (mapped mask=348)
+[ZMQ ] received id=351, cached 2073600 bytes
+[PROJ] trig #675 @1903383386816963 ns -> visible_id=-1 | queued next_id=348 (readyQ=0, swappedQ~)
+[DRAW] id=348 target_pidx+1=676 draw+swap=3.65286 ms, swappedQ=1
+[ZMQ ] received id=352, cached 2073600 bytes
+[PROJ] trig #676 @1903383403500837 ns -> visible_id=348 | (no ready id; L=1)
+[CAM ] frame #344 @1903383403512549 ns -> PROJ #676 visible_id=348 (mapped mask=350)
+[ZMQ ] received id=353, cached 2073600 bytes
+[PROJ] trig #677 @1903383420183494 ns -> visible_id=-1 | queued next_id=350 (readyQ=0, swappedQ~)
+[DRAW] id=350 target_pidx+1=678 draw+swap=3.96243 ms, swappedQ=1
+[ZMQ ] received id=354, cached 2073600 bytes
+[PROJ] trig #678 @1903383436867112 ns -> visible_id=350 | (no ready id; L=1)
+[CAM ] frame #345 @1903383436877928 ns -> PROJ #678 visible_id=350 (mapped mask=352)
+[ZMQ ] received id=355, cached 2073600 bytes
+[PROJ] trig #679 @1903383453551370 ns -> visible_id=-1 | queued next_id=352 (readyQ=0, swappedQ~)
+[ZMQ ] received id=356, cached 2073600 bytes
+[DRAW] id=352 target_pidx+1=680 draw+swap=3.95142 ms, swappedQ=1
+[PROJ] trig #680 @1903383470236076 ns -> visible_id=352 | (no ready id; L=1)
+[CAM ] frame #346 @1903383470249132 ns -> PROJ #680 visible_id=352 (mapped mask=354)
+[ZMQ ] received id=357, cached 2073600 bytes
+[PROJ] trig #681 @1903383486920302 ns -> visible_id=-1 | queued next_id=354 (readyQ=0, swappedQ~)
+[DRAW] id=354 target_pidx+1=682 draw+swap=3.78272 ms, swappedQ=1
+[ZMQ ] received id=358, cached 2073600 bytes
+[PROJ] trig #682 @1903383503605615 ns -> visible_id=354 | (no ready id; L=1)
+[CAM ] frame #347 @1903383503627024 ns -> PROJ #682 visible_id=354 (mapped mask=356)
+[ZMQ ] received id=359, cached 2073600 bytes
+[PROJ] trig #683 @1903383520286769 ns -> visible_id=-1 | queued next_id=356 (readyQ=0, swappedQ~)
+[ZMQ ] received id=360, cached 2073600 bytes
+[DRAW] id=356 target_pidx+1=684 draw+swap=3.8704 ms, swappedQ=1
+[PROJ] trig #684 @1903383536971347 ns -> visible_id=356 | (no ready id; L=1)
+[CAM ] frame #348 @1903383536984083 ns -> PROJ #684 visible_id=356 (mapped mask=358)
+[ZMQ ] received id=361, cached 2073600 bytes
+[PROJ] trig #685 @1903383553653109 ns -> visible_id=-1 | queued next_id=358 (readyQ=0, swappedQ~)
+[ZMQ ] received id=362, cached 2073600 bytes
+[DRAW] id=358 target_pidx+1=686 draw+swap=5.37923 ms, swappedQ=1
+[PROJ] trig #686 @1903383570338198 ns -> visible_id=358 | (no ready id; L=1)
+[CAM ] frame #349 @1903383570349431 ns -> PROJ #686 visible_id=358 (mapped mask=360)
+[ZMQ ] received id=363, cached 2073600 bytes
+[PROJ] trig #687 @1903383587021432 ns -> visible_id=-1 | queued next_id=360 (readyQ=0, swappedQ~)
+[ZMQ ] received id=364, cached 2073600 bytes
+[DRAW] id=360 target_pidx+1=688 draw+swap=3.72461 ms, swappedQ=1
+[PROJ] trig #688 @1903383603705594 ns -> visible_id=360 | (no ready id; L=1)
+[CAM ] frame #350 @1903383603717370 ns -> PROJ #688 visible_id=360 (mapped mask=362)
+[ZMQ ] received id=365, cached 2073600 bytes
+[PROJ] trig #689 @1903383620387164 ns -> visible_id=-1 | queued next_id=362 (readyQ=0, swappedQ~)
+[ZMQ ] received id=366, cached 2073600 bytes
+[DRAW] id=362 target_pidx+1=690 draw+swap=4.23686 ms, swappedQ=1
+[PROJ] trig #690 @1903383637073182 ns -> visible_id=362 | (no ready id; L=1)
+[CAM ] frame #351 @1903383637085342 ns -> PROJ #690 visible_id=362 (mapped mask=364)
+[ZMQ ] received id=367, cached 2073600 bytes
+[PROJ] trig #691 @1903383653755167 ns -> visible_id=-1 | queued next_id=364 (readyQ=0, swappedQ~)
+[ZMQ ] received id=368, cached 2073600 bytes
+[DRAW] id=364 target_pidx+1=692 draw+swap=4.6289 ms, swappedQ=1
+[PROJ] trig #692 @1903383670440481 ns -> visible_id=364 | (no ready id; L=1)
+[CAM ] frame #352 @1903383670452353 ns -> PROJ #692 visible_id=364 (mapped mask=366)
+[ZMQ ] received id=369, cached 2073600 bytes
+[PROJ] trig #693 @1903383687123939 ns -> visible_id=-1 | queued next_id=366 (readyQ=0, swappedQ~)
+[ZMQ ] received id=370, cached 2073600 bytes
+[DRAW] id=366 target_pidx+1=694 draw+swap=4.16883 ms, swappedQ=1
+[PROJ] trig #694 @1903383703808421 ns -> visible_id=366 | (no ready id; L=1)
+[CAM ] frame #353 @1903383703820773 ns -> PROJ #694 visible_id=366 (mapped mask=368)
+[ZMQ ] received id=371, cached 2073600 bytes
+[PROJ] trig #695 @1903383720490054 ns -> visible_id=-1 | queued next_id=368 (readyQ=0, swappedQ~)
+[ZMQ ] received id=372, cached 2073600 bytes
+[DRAW] id=368 target_pidx+1=696 draw+swap=3.95037 ms, swappedQ=1
+[PROJ] trig #696 @1903383737177032 ns -> visible_id=368 | (no ready id; L=1)
+[CAM ] frame #354 @1903383737189736 ns -> PROJ #696 visible_id=368 (mapped mask=370)
+[ZMQ ] received id=373, cached 2073600 bytes
+[PROJ] trig #697 @1903383753858794 ns -> visible_id=-1 | queued next_id=370 (readyQ=0, swappedQ~)
+[ZMQ ] received id=374, cached 2073600 bytes
+[DRAW] id=370 target_pidx+1=698 draw+swap=3.74864 ms, swappedQ=1
+[PROJ] trig #698 @1903383770544076 ns -> visible_id=370 | (no ready id; L=1)
+[CAM ] frame #355 @1903383770557068 ns -> PROJ #698 visible_id=370 (mapped mask=372)
+[ZMQ ] received id=375, cached 2073600 bytes
+[PROJ] trig #699 @1903383787225709 ns -> visible_id=-1 | queued next_id=372 (readyQ=0, swappedQ~)
+[ZMQ ] received id=376, cached 2073600 bytes
+[DRAW] id=372 target_pidx+1=700 draw+swap=3.89834 ms, swappedQ=1
+[PROJ] trig #700 @1903383803925007 ns -> visible_id=372 | (no ready id; L=1)
+[CAM ] frame #356 @1903383803921295 ns -> PROJ #700 visible_id=372 (mapped mask=374)
+[ZMQ ] received id=377, cached 2073600 bytes
+[PROJ] trig #701 @1903383820592721 ns -> visible_id=-1 | queued next_id=374 (readyQ=0, swappedQ~)
+[DRAW] id=374 target_pidx+1=702 draw+swap=3.53581 ms, swappedQ=1
+[ZMQ ] received id=378, cached 2073600 bytes
+[PROJ] trig #702 @1903383837277427 ns -> visible_id=374 | (no ready id; L=1)
+[CAM ] frame #357 @1903383837290707 ns -> PROJ #702 visible_id=374 (mapped mask=376)
+[ZMQ ] received id=379, cached 2073600 bytes
+[PROJ] trig #703 @1903383853960565 ns -> visible_id=-1 | queued next_id=376 (readyQ=0, swappedQ~)
+[ZMQ ] received id=380, cached 2073600 bytes
+[DRAW] id=376 target_pidx+1=704 draw+swap=5.76506 ms, swappedQ=1
+[PROJ] trig #704 @1903383870645750 ns -> visible_id=376 | (no ready id; L=1)
+[CAM ] frame #358 @1903383870657558 ns -> PROJ #704 visible_id=376 (mapped mask=378)
+[ZMQ ] received id=381, cached 2073600 bytes
+[PROJ] trig #705 @1903383887328024 ns -> visible_id=-1 | queued next_id=378 (readyQ=0, swappedQ~)
+[ZMQ ] received id=382, cached 2073600 bytes
+[DRAW] id=378 target_pidx+1=706 draw+swap=5.91834 ms, swappedQ=1
+[PROJ] trig #706 @1903383904013018 ns -> visible_id=378 | (no ready id; L=1)
+[CAM ] frame #359 @1903383904025178 ns -> PROJ #706 visible_id=378 (mapped mask=380)
+[ZMQ ] received id=383, cached 2073600 bytes
+[PROJ] trig #707 @1903383920695740 ns -> visible_id=-1 | queued next_id=380 (readyQ=0, swappedQ~)
+[ZMQ ] received id=384, cached 2073600 bytes
+[DRAW] id=380 target_pidx+1=708 draw+swap=5.88118 ms, swappedQ=1
+[PROJ] trig #708 @1903383937379581 ns -> visible_id=380 | (no ready id; L=1)
+[CAM ] frame #360 @1903383937390942 ns -> PROJ #708 visible_id=380 (mapped mask=382)
+[ZMQ ] received id=385, cached 2073600 bytes
+[PROJ] trig #709 @1903383954065279 ns -> visible_id=-1 | queued next_id=382 (readyQ=0, swappedQ~)
+[ZMQ ] received id=386, cached 2073600 bytes
+[DRAW] id=382 target_pidx+1=710 draw+swap=3.98467 ms, swappedQ=1
+[PROJ] trig #710 @1903383970750561 ns -> visible_id=382 | (no ready id; L=1)
+[CAM ] frame #361 @1903383970763137 ns -> PROJ #710 visible_id=382 (mapped mask=384)
+[ZMQ ] received id=387, cached 2073600 bytes
+[PROJ] trig #711 @1903383987431747 ns -> visible_id=-1 | queued next_id=384 (readyQ=0, swappedQ~)
+[ZMQ ] received id=388, cached 2073600 bytes
+[DRAW] id=384 target_pidx+1=712 draw+swap=4.62608 ms, swappedQ=1
+[PROJ] trig #712 @1903384004115429 ns -> visible_id=384 | (no ready id; L=1)
+[CAM ] frame #362 @1903384004127333 ns -> PROJ #712 visible_id=384 (mapped mask=386)
+[ZMQ ] received id=389, cached 2073600 bytes
+[PROJ] trig #713 @1903384020799750 ns -> visible_id=-1 | queued next_id=386 (readyQ=0, swappedQ~)
+[ZMQ ] received id=390, cached 2073600 bytes
+[DRAW] id=386 target_pidx+1=714 draw+swap=4.74544 ms, swappedQ=1
+[PROJ] trig #714 @1903384037481896 ns -> visible_id=386 | (no ready id; L=1)
+[CAM ] frame #363 @1903384037496904 ns -> PROJ #714 visible_id=386 (mapped mask=388)
+[ZMQ ] received id=391, cached 2073600 bytes
+[PROJ] trig #715 @1903384054166410 ns -> visible_id=-1 | queued next_id=388 (readyQ=0, swappedQ~)
+[ZMQ ] received id=392, cached 2073600 bytes
+[DRAW] id=388 target_pidx+1=716 draw+swap=3.52202 ms, swappedQ=1
+[PROJ] trig #716 @1903384070850220 ns -> visible_id=388 | (no ready id; L=1)
+[CAM ] frame #364 @1903384070861324 ns -> PROJ #716 visible_id=388 (mapped mask=390)
+[ZMQ ] received id=393, cached 2073600 bytes
+[PROJ] trig #717 @1903384087529837 ns -> visible_id=-1 | queued next_id=390 (readyQ=0, swappedQ~)
+[DRAW] id=390 target_pidx+1=718 draw+swap=3.15891 ms, swappedQ=1
+[ZMQ ] received id=394, cached 2073600 bytes
+[PROJ] trig #718 @1903384104217519 ns -> visible_id=390 | (no ready id; L=1)
+[CAM ] frame #365 @1903384104236015 ns -> PROJ #718 visible_id=390 (mapped mask=392)
+[ZMQ ] received id=395, cached 2073600 bytes
+[PROJ] trig #719 @1903384120901265 ns -> visible_id=-1 | queued next_id=392 (readyQ=0, swappedQ~)
+[ZMQ ] received id=396, cached 2073600 bytes
+[DRAW] id=392 target_pidx+1=720 draw+swap=3.43984 ms, swappedQ=1
+[PROJ] trig #720 @1903384137586675 ns -> visible_id=392 | (no ready id; L=1)
+[CAM ] frame #366 @1903384137599091 ns -> PROJ #720 visible_id=392 (mapped mask=394)
+[ZMQ ] received id=397, cached 2073600 bytes
+[PROJ] trig #721 @1903384154266260 ns -> visible_id=-1 | queued next_id=394 (readyQ=0, swappedQ~)
+[DRAW] id=394 target_pidx+1=722 draw+swap=3.3777 ms, swappedQ=1
+[ZMQ ] received id=398, cached 2073600 bytes
+[PROJ] trig #722 @1903384170952918 ns -> visible_id=394 | (no ready id; L=1)
+[CAM ] frame #367 @1903384170964566 ns -> PROJ #722 visible_id=394 (mapped mask=396)
+[ZMQ ] received id=399, cached 2073600 bytes
+[PROJ] trig #723 @1903384187634328 ns -> visible_id=-1 | queued next_id=396 (readyQ=0, swappedQ~)
+[ZMQ ] received id=400, cached 2073600 bytes
+[DRAW] id=396 target_pidx+1=724 draw+swap=3.44554 ms, swappedQ=1
+[PROJ] trig #724 @1903384204320570 ns -> visible_id=396 | (no ready id; L=1)
+[CAM ] frame #368 @1903384204333594 ns -> PROJ #724 visible_id=396 (mapped mask=398)
+[ZMQ ] received id=401, cached 2073600 bytes
+[PROJ] trig #725 @1903384221001724 ns -> visible_id=-1 | queued next_id=398 (readyQ=0, swappedQ~)
+[ZMQ ] received id=402, cached 2073600 bytes
+[DRAW] id=398 target_pidx+1=726 draw+swap=3.58342 ms, swappedQ=1
+[PROJ] trig #726 @1903384237690237 ns -> visible_id=398 | (no ready id; L=1)
+[CAM ] frame #369 @1903384237706462 ns -> PROJ #726 visible_id=398 (mapped mask=400)
+[ZMQ ] received id=403, cached 2073600 bytes
+[PROJ] trig #727 @1903384254371583 ns -> visible_id=-1 | queued next_id=400 (readyQ=0, swappedQ~)
+[ZMQ ] received id=404, cached 2073600 bytes
+[DRAW] id=400 target_pidx+1=728 draw+swap=3.3801 ms, swappedQ=1
+[PROJ] trig #728 @1903384271056065 ns -> visible_id=400 | (no ready id; L=1)
+[CAM ] frame #370 @1903384271075905 ns -> PROJ #728 visible_id=400 (mapped mask=402)
+[ZMQ ] received id=405, cached 2073600 bytes
+[PROJ] trig #729 @1903384287739747 ns -> visible_id=-1 | queued next_id=402 (readyQ=0, swappedQ~)
+[ZMQ ] received id=406, cached 2073600 bytes
+[DRAW] id=402 target_pidx+1=730 draw+swap=3.73581 ms, swappedQ=1
+[PROJ] trig #730 @1903384304421540 ns -> visible_id=402 | (no ready id; L=1)
+[CAM ] frame #371 @1903384304437253 ns -> PROJ #730 visible_id=402 (mapped mask=404)
+[ZMQ ] received id=407, cached 2073600 bytes
+[PROJ] trig #731 @1903384321106342 ns -> visible_id=-1 | queued next_id=404 (readyQ=0, swappedQ~)
+[ZMQ ] received id=408, cached 2073600 bytes
+[DRAW] id=404 target_pidx+1=732 draw+swap=3.76432 ms, swappedQ=1
+[PROJ] trig #732 @1903384337790024 ns -> visible_id=404 | (no ready id; L=1)
+[CAM ] frame #372 @1903384337807272 ns -> PROJ #732 visible_id=404 (mapped mask=406)
+[ZMQ ] received id=409, cached 2073600 bytes
+[PROJ] trig #733 @1903384354473738 ns -> visible_id=-1 | queued next_id=406 (readyQ=0, swappedQ~)
+[ZMQ ] received id=410, cached 2073600 bytes
+[DRAW] id=406 target_pidx+1=734 draw+swap=2.27024 ms, swappedQ=1
+[PROJ] trig #734 @1903384371156108 ns -> visible_id=406 | (no ready id; L=1)
+[CAM ] frame #373 @1903384371167212 ns -> PROJ #734 visible_id=406 (mapped mask=408)
+[ZMQ ] received id=411, cached 2073600 bytes
+[PROJ] trig #735 @1903384387841837 ns -> visible_id=-1 | queued next_id=408 (readyQ=0, swappedQ~)
+[ZMQ ] received id=412, cached 2073600 bytes
+[DRAW] id=408 target_pidx+1=736 draw+swap=3.53354 ms, swappedQ=1
+[PROJ] trig #736 @1903384404524687 ns -> visible_id=408 | (no ready id; L=1)
+[CAM ] frame #374 @1903384404535855 ns -> PROJ #736 visible_id=408 (mapped mask=410)
+[ZMQ ] received id=413, cached 2073600 bytes
+[PROJ] trig #737 @1903384421207281 ns -> visible_id=-1 | queued next_id=410 (readyQ=0, swappedQ~)
+[ZMQ ] received id=414, cached 2073600 bytes
+[DRAW] id=410 target_pidx+1=738 draw+swap=2.82758 ms, swappedQ=1
+[PROJ] trig #738 @1903384437894035 ns -> visible_id=410 | (no ready id; L=1)
+[CAM ] frame #375 @1903384437906835 ns -> PROJ #738 visible_id=410 (mapped mask=412)
+[ZMQ ] received id=415, cached 2073600 bytes
+[PROJ] trig #739 @1903384454575988 ns -> visible_id=-1 | queued next_id=412 (readyQ=0, swappedQ~)
+[ZMQ ] received id=416, cached 2073600 bytes
+[DRAW] id=412 target_pidx+1=740 draw+swap=3.54634 ms, swappedQ=1
+[PROJ] trig #740 @1903384471259990 ns -> visible_id=412 | (no ready id; L=1)
+[CAM ] frame #376 @1903384471274614 ns -> PROJ #740 visible_id=412 (mapped mask=414)
+[ZMQ ] received id=417, cached 2073600 bytes
+[PROJ] trig #741 @1903384487943704 ns -> visible_id=-1 | queued next_id=414 (readyQ=0, swappedQ~)
+[ZMQ ] received id=418, cached 2073600 bytes
+[DRAW] id=414 target_pidx+1=742 draw+swap=3.5473 ms, swappedQ=1
+[PROJ] trig #742 @1903384504627578 ns -> visible_id=414 | (no ready id; L=1)
+[CAM ] frame #377 @1903384504645466 ns -> PROJ #742 visible_id=414 (mapped mask=416)
+[ZMQ ] received id=419, cached 2073600 bytes
+[PROJ] trig #743 @1903384521310044 ns -> visible_id=-1 | queued next_id=416 (readyQ=0, swappedQ~)
+[ZMQ ] received id=420, cached 2073600 bytes
+[DRAW] id=416 target_pidx+1=744 draw+swap=2.33786 ms, swappedQ=1
+[PROJ] trig #744 @1903384537995325 ns -> visible_id=416 | (no ready id; L=1)
+[CAM ] frame #378 @1903384538008701 ns -> PROJ #744 visible_id=416 (mapped mask=418)
+[ZMQ ] received id=421, cached 2073600 bytes
+[PROJ] trig #745 @1903384554677887 ns -> visible_id=-1 | queued next_id=418 (readyQ=0, swappedQ~)
+[ZMQ ] received id=422, cached 2073600 bytes
+[DRAW] id=418 target_pidx+1=746 draw+swap=2.27859 ms, swappedQ=1
+[PROJ] trig #746 @1903384571361985 ns -> visible_id=418 | (no ready id; L=1)
+[CAM ] frame #379 @1903384571376961 ns -> PROJ #746 visible_id=418 (mapped mask=420)
+[ZMQ ] received id=423, cached 2073600 bytes
+[PROJ] trig #747 @1903384588045475 ns -> visible_id=-1 | queued next_id=420 (readyQ=0, swappedQ~)
+[ZMQ ] received id=424, cached 2073600 bytes
+[DRAW] id=420 target_pidx+1=748 draw+swap=3.37395 ms, swappedQ=1
+[PROJ] trig #748 @1903384604730756 ns -> visible_id=420 | (no ready id; L=1)
+[CAM ] frame #380 @1903384604742981 ns -> PROJ #748 visible_id=420 (mapped mask=422)
+[ZMQ ] received id=425, cached 2073600 bytes
+[PROJ] trig #749 @1903384621413830 ns -> visible_id=-1 | queued next_id=422 (readyQ=0, swappedQ~)
+[ZMQ ] received id=426, cached 2073600 bytes
+[DRAW] id=422 target_pidx+1=750 draw+swap=2.74982 ms, swappedQ=1
+[PROJ] trig #750 @1903384638100936 ns -> visible_id=422 | (no ready id; L=1)
+[CAM ] frame #381 @1903384638113608 ns -> PROJ #750 visible_id=422 (mapped mask=424)
+[ZMQ ] received id=427, cached 2073600 bytes
+[PROJ] trig #751 @1903384654782794 ns -> visible_id=-1 | queued next_id=424 (readyQ=0, swappedQ~)
+[ZMQ ] received id=428, cached 2073600 bytes
+[DRAW] id=424 target_pidx+1=752 draw+swap=3.37773 ms, swappedQ=1
+[PROJ] trig #752 @1903384671467116 ns -> visible_id=424 | (no ready id; L=1)
+[CAM ] frame #382 @1903384671489196 ns -> PROJ #752 visible_id=424 (mapped mask=426)
+[ZMQ ] received id=429, cached 2073600 bytes
+[PROJ] trig #753 @1903384688148717 ns -> visible_id=-1 | queued next_id=426 (readyQ=0, swappedQ~)
+[ZMQ ] received id=430, cached 2073600 bytes
+[DRAW] id=426 target_pidx+1=754 draw+swap=2.9345 ms, swappedQ=1
+[PROJ] trig #754 @1903384704833359 ns -> visible_id=426 | (no ready id; L=1)
+[CAM ] frame #383 @1903384704845423 ns -> PROJ #754 visible_id=426 (mapped mask=428)
+[ZMQ ] received id=431, cached 2073600 bytes
+[PROJ] trig #755 @1903384721516785 ns -> visible_id=-1 | queued next_id=428 (readyQ=0, swappedQ~)
+[ZMQ ] received id=432, cached 2073600 bytes
+[DRAW] id=428 target_pidx+1=756 draw+swap=2.23901 ms, swappedQ=1
+[PROJ] trig #756 @1903384738200179 ns -> visible_id=428 | queued next_id=430 (readyQ=0, swappedQ~)
+[CAM ] frame #384 @1903384738213651 ns -> PROJ #756 visible_id=428 (mapped mask=430)
+[ZMQ ] received id=433, cached 2073600 bytes
+[DRAW] id=430 target_pidx+1=757 draw+swap=3.62496 ms, swappedQ=1
+[PROJ] trig #757 @1903384754883476 ns -> visible_id=430 | (no ready id; L=1)
+[ZMQ ] received id=434, cached 2073600 bytes
+[PROJ] trig #758 @1903384771567190 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #385 @1903384771581014 ns -> PROJ #758 visible_id=-1 (mapped mask=432)
+[ZMQ ] received id=435, cached 2073600 bytes
+[PROJ] trig #759 @1903384788250552 ns -> visible_id=-1 | queued next_id=432 (readyQ=0, swappedQ~)
+[ZMQ ] received id=436, cached 2073600 bytes
+[DRAW] id=432 target_pidx+1=760 draw+swap=3.66419 ms, swappedQ=1
+[PROJ] trig #760 @1903384804936602 ns -> visible_id=432 | (no ready id; L=1)
+[CAM ] frame #386 @1903384804948154 ns -> PROJ #760 visible_id=432 (mapped mask=434)
+[ZMQ ] received id=437, cached 2073600 bytes
+[PROJ] trig #761 @1903384821620155 ns -> visible_id=-1 | queued next_id=434 (readyQ=0, swappedQ~)
+[ZMQ ] received id=438, cached 2073600 bytes
+[DRAW] id=434 target_pidx+1=762 draw+swap=2.8744 ms, swappedQ=1
+[PROJ] trig #762 @1903384838304989 ns -> visible_id=434 | (no ready id; L=1)
+[CAM ] frame #387 @1903384838318493 ns -> PROJ #762 visible_id=434 (mapped mask=436)
+[ZMQ ] received id=439, cached 2073600 bytes
+[PROJ] trig #763 @1903384854987007 ns -> visible_id=-1 | queued next_id=436 (readyQ=0, swappedQ~)
+[ZMQ ] received id=440, cached 2073600 bytes
+[DRAW] id=436 target_pidx+1=764 draw+swap=2.79686 ms, swappedQ=1
+[PROJ] trig #764 @1903384871670849 ns -> visible_id=436 | (no ready id; L=1)
+[CAM ] frame #388 @1903384871690625 ns -> PROJ #764 visible_id=436 (mapped mask=438)
+[ZMQ ] received id=441, cached 2073600 bytes
+[PROJ] trig #765 @1903384888353571 ns -> visible_id=-1 | queued next_id=438 (readyQ=0, swappedQ~)
+[ZMQ ] received id=442, cached 2073600 bytes
+[DRAW] id=438 target_pidx+1=766 draw+swap=3.85962 ms, swappedQ=1
+[PROJ] trig #766 @1903384905039556 ns -> visible_id=438 | (no ready id; L=1)
+[CAM ] frame #389 @1903384905058949 ns -> PROJ #766 visible_id=438 (mapped mask=440)
+[ZMQ ] received id=443, cached 2073600 bytes
+[PROJ] trig #767 @1903384921721382 ns -> visible_id=-1 | queued next_id=440 (readyQ=0, swappedQ~)
+[ZMQ ] received id=444, cached 2073600 bytes
+[DRAW] id=440 target_pidx+1=768 draw+swap=2.43763 ms, swappedQ=1
+[CAM ] frame #390 @1903384938417640 ns -> PROJ #768 visible_id=440 (mapped mask=442)
+[PROJ] trig #768 @1903384938406216 ns -> visible_id=440 | queued next_id=442 (readyQ=0, swappedQ~)
+[ZMQ ] received id=445, cached 2073600 bytes
+[DRAW] id=442 target_pidx+1=769 draw+swap=3.75558 ms, swappedQ=1
+[PROJ] trig #769 @1903384955087818 ns -> visible_id=442 | (no ready id; L=1)
+[ZMQ ] received id=446, cached 2073600 bytes
+[CAM ] frame #391 @1903384971787948 ns -> PROJ #770 visible_id=-1 (mapped mask=444)
+[PROJ] trig #770 @1903384971774571 ns -> visible_id=-1 | queued next_id=444 (readyQ=0, swappedQ~)
+[ZMQ ] received id=447, cached 2073600 bytes
+[DRAW] id=444 target_pidx+1=771 draw+swap=3.83718 ms, swappedQ=1
+[PROJ] trig #771 @1903384988455917 ns -> visible_id=444 | (no ready id; L=1)
+[ZMQ ] received id=448, cached 2073600 bytes
+[ZMQ ] received id=449, cached 2073600 bytes
+[CAM ] frame #392 @1903385005150767 ns -> PROJ #772 visible_id=-1 (mapped mask=446)
+[PROJ] trig #772 @1903385005139375 ns -> visible_id=-1 | queued next_id=446 (readyQ=0, swappedQ~)
+[DRAW] id=446 target_pidx+1=773 draw+swap=2.47754 ms, swappedQ=1
+[PROJ] trig #773 @1903385021823409 ns -> visible_id=446 | (no ready id; L=1)
+[ZMQ ] received id=450, cached 2073600 bytes
+[PROJ] trig #774 @1903385038505554 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #393 @1903385038516627 ns -> PROJ #774 visible_id=-1 (mapped mask=449)
+[ZMQ ] received id=451, cached 2073600 bytes
+[PROJ] trig #775 @1903385055190932 ns -> visible_id=-1 | queued next_id=449 (readyQ=0, swappedQ~)
+[ZMQ ] received id=452, cached 2073600 bytes
+[DRAW] id=449 target_pidx+1=776 draw+swap=2.56221 ms, swappedQ=1
+[PROJ] trig #776 @1903385071874166 ns -> visible_id=449 | (no ready id; L=1)
+[CAM ] frame #394 @1903385071884886 ns -> PROJ #776 visible_id=449 (mapped mask=450)
+[ZMQ ] received id=453, cached 2073600 bytes
+[PROJ] trig #777 @1903385088559928 ns -> visible_id=-1 | queued next_id=450 (readyQ=0, swappedQ~)
+[ZMQ ] received id=454, cached 2073600 bytes
+[DRAW] id=450 target_pidx+1=778 draw+swap=3.11427 ms, swappedQ=1
+[PROJ] trig #778 @1903385105243610 ns -> visible_id=450 | (no ready id; L=1)
+[CAM ] frame #395 @1903385105255354 ns -> PROJ #778 visible_id=450 (mapped mask=452)
+[ZMQ ] received id=455, cached 2073600 bytes
+[PROJ] trig #779 @1903385121925915 ns -> visible_id=-1 | queued next_id=452 (readyQ=0, swappedQ~)
+[ZMQ ] received id=456, cached 2073600 bytes
+[DRAW] id=452 target_pidx+1=780 draw+swap=2.3351 ms, swappedQ=1
+[PROJ] trig #780 @1903385138610429 ns -> visible_id=452 | (no ready id; L=1)
+[ZMQ ] received id=457, cached 2073600 bytes
+[CAM ] frame #396 @1903385138622109 ns -> PROJ #780 visible_id=452 (mapped mask=454)
+[PROJ] trig #781 @1903385155295103 ns -> visible_id=-1 | queued next_id=454 (readyQ=0, swappedQ~)
+[ZMQ ] received id=458, cached 2073600 bytes
+[DRAW] id=454 target_pidx+1=782 draw+swap=4.48627 ms, swappedQ=1
+[ZMQ ] received id=459, cached 2073600 bytes
+[CAM ] frame #397 @1903385171990273 ns -> PROJ #782 visible_id=454 (mapped mask=456)
+[PROJ] trig #782 @1903385171977761 ns -> visible_id=454 | (no ready id; L=1)
+[PROJ] trig #783 @1903385188662402 ns -> visible_id=-1 | queued next_id=456 (readyQ=1, swappedQ~)
+[CAM ] frame #398 @1903385188674115 ns -> PROJ #783 visible_id=-1 (mapped mask=459)
+[ZMQ ] received id=460, cached 2073600 bytes
+[DRAW] id=456 target_pidx+1=784 draw+swap=4.28858 ms, swappedQ=1
+[PROJ] trig #784 @1903385205345156 ns -> visible_id=456 | queued next_id=459 (readyQ=1, swappedQ~)
+[CAM ] frame #399 @1903385205356708 ns -> PROJ #784 visible_id=456 (mapped mask=459)
+[ZMQ ] received id=461, cached 2073600 bytes
+[DRAW] id=459 target_pidx+1=785 draw+swap=3.41062 ms, swappedQ=1
+[PROJ] trig #785 @1903385222030022 ns -> visible_id=459 | queued next_id=459 (readyQ=0, swappedQ~)
+[ZMQ ] received id=462, cached 2073600 bytes
+[DRAW] id=459 target_pidx+1=786 draw+swap=3.43965 ms, swappedQ=1
+[PROJ] trig #786 @1903385238713320 ns -> visible_id=459 | queued next_id=460 (readyQ=0, swappedQ~)
+[CAM ] frame #400 @1903385238727144 ns -> PROJ #786 visible_id=459 (mapped mask=460)
+[ZMQ ] received id=463, cached 2073600 bytes
+[DRAW] id=460 target_pidx+1=787 draw+swap=6.39901 ms, swappedQ=1
+[PROJ] trig #787 @1903385255395370 ns -> visible_id=460 | (no ready id; L=1)
+[ZMQ ] received id=464, cached 2073600 bytes
+[PROJ] trig #788 @1903385272081579 ns -> visible_id=-1 | queued next_id=462 (readyQ=0, swappedQ~)
+[CAM ] frame #401 @1903385272096332 ns -> PROJ #788 visible_id=-1 (mapped mask=462)
+[ZMQ ] received id=465, cached 2073600 bytes
+[DRAW] id=462 target_pidx+1=789 draw+swap=2.54467 ms, swappedQ=1
+[PROJ] trig #789 @1903385288765773 ns -> visible_id=462 | (no ready id; L=1)
+[ZMQ ] received id=466, cached 2073600 bytes
+[PROJ] trig #790 @1903385305447727 ns -> visible_id=-1 | queued next_id=464 (readyQ=0, swappedQ~)
+[CAM ] frame #402 @1903385305459407 ns -> PROJ #790 visible_id=-1 (mapped mask=464)
+[ZMQ ] received id=467, cached 2073600 bytes
+[DRAW] id=464 target_pidx+1=791 draw+swap=3.63955 ms, swappedQ=1
+[PROJ] trig #791 @1903385322130897 ns -> visible_id=464 | (no ready id; L=1)
+[ZMQ ] received id=468, cached 2073600 bytes
+[PROJ] trig #792 @1903385338813394 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #403 @1903385338827027 ns -> PROJ #792 visible_id=-1 (mapped mask=466)
+[ZMQ ] received id=469, cached 2073600 bytes
+[PROJ] trig #793 @1903385355498964 ns -> visible_id=-1 | queued next_id=466 (readyQ=0, swappedQ~)
+[ZMQ ] received id=470, cached 2073600 bytes
+[DRAW] id=466 target_pidx+1=794 draw+swap=3.35974 ms, swappedQ=1
+[ZMQ ] received id=471, cached 2073600 bytes
+[PROJ] trig #794 @1903385372181398 ns -> visible_id=466 | (no ready id; L=1)
+[CAM ] frame #404 @1903385372198198 ns -> PROJ #794 visible_id=466 (mapped mask=468)
+[PROJ] trig #795 @1903385388868088 ns -> visible_id=-1 | queued next_id=468 (readyQ=0, swappedQ~)
+[ZMQ ] received id=472, cached 2073600 bytes
+[DRAW] id=468 target_pidx+1=796 draw+swap=2.60419 ms, swappedQ=1
+[PROJ] trig #796 @1903385405552474 ns -> visible_id=468 | (no ready id; L=1)
+[ZMQ ] received id=473, cached 2073600 bytes
+[CAM ] frame #405 @1903385405566138 ns -> PROJ #796 visible_id=468 (mapped mask=471)
+[PROJ] trig #797 @1903385422233243 ns -> visible_id=-1 | queued next_id=471 (readyQ=0, swappedQ~)
+[ZMQ ] received id=474, cached 2073600 bytes
+[DRAW] id=471 target_pidx+1=798 draw+swap=2.34154 ms, swappedQ=1
+[ZMQ ] received id=475, cached 2073600 bytes
+[CAM ] frame #406 @1903385438927997 ns -> PROJ #798 visible_id=471 (mapped mask=473)
+[PROJ] trig #798 @1903385438916573 ns -> visible_id=471 | queued next_id=473 (readyQ=0, swappedQ~)
+[DRAW] id=473 target_pidx+1=799 draw+swap=5.35622 ms, swappedQ=1
+[PROJ] trig #799 @1903385455601503 ns -> visible_id=473 | (no ready id; L=1)
+[ZMQ ] received id=476, cached 2073600 bytes
+[ZMQ ] received id=477, cached 2073600 bytes
+[PROJ] trig #800 @1903385472285025 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #407 @1903385472298145 ns -> PROJ #800 visible_id=-1 (mapped mask=475)
+[PROJ] trig #801 @1903385488968930 ns -> visible_id=-1 | queued next_id=475 (readyQ=0, swappedQ~)
+[ZMQ ] received id=478, cached 2073600 bytes
+[DRAW] id=475 target_pidx+1=802 draw+swap=2.56336 ms, swappedQ=1
+[ZMQ ] received id=479, cached 2073600 bytes
+[PROJ] trig #802 @1903385505652452 ns -> visible_id=475 | (no ready id; L=1)
+[CAM ] frame #408 @1903385505663236 ns -> PROJ #802 visible_id=475 (mapped mask=477)
+[PROJ] trig #803 @1903385522335846 ns -> visible_id=-1 | queued next_id=477 (readyQ=0, swappedQ~)
+[ZMQ ] received id=480, cached 2073600 bytes
+[DRAW] id=477 target_pidx+1=804 draw+swap=2.40022 ms, swappedQ=1
+[ZMQ ] received id=481, cached 2073600 bytes
+[PROJ] trig #804 @1903385539020488 ns -> visible_id=477 | (no ready id; L=1)
+[CAM ] frame #409 @1903385539032552 ns -> PROJ #804 visible_id=477 (mapped mask=479)
+[PROJ] trig #805 @1903385555704105 ns -> visible_id=-1 | queued next_id=479 (readyQ=0, swappedQ~)
+[ZMQ ] received id=482, cached 2073600 bytes
+[DRAW] id=479 target_pidx+1=806 draw+swap=2.45194 ms, swappedQ=1
+[ZMQ ] received id=483, cached 2073600 bytes
+[PROJ] trig #806 @1903385572387467 ns -> visible_id=479 | (no ready id; L=1)
+[CAM ] frame #410 @1903385572398603 ns -> PROJ #806 visible_id=479 (mapped mask=481)
+[PROJ] trig #807 @1903385589071117 ns -> visible_id=-1 | queued next_id=481 (readyQ=0, swappedQ~)
+[ZMQ ] received id=484, cached 2073600 bytes
+[DRAW] id=481 target_pidx+1=808 draw+swap=2.83894 ms, swappedQ=1
+[ZMQ ] received id=485, cached 2073600 bytes
+[CAM ] frame #411 @1903385605765551 ns -> PROJ #808 visible_id=481 (mapped mask=483)
+[PROJ] trig #808 @1903385605754351 ns -> visible_id=481 | queued next_id=483 (readyQ=0, swappedQ~)
+[DRAW] id=483 target_pidx+1=809 draw+swap=5.4865 ms, swappedQ=1
+[PROJ] trig #809 @1903385622438161 ns -> visible_id=483 | (no ready id; L=1)
+[ZMQ ] received id=486, cached 2073600 bytes
+[PROJ] trig #810 @1903385639124722 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #412 @1903385639138163 ns -> PROJ #810 visible_id=-1 (mapped mask=485)
+[ZMQ ] received id=487, cached 2073600 bytes
+[PROJ] trig #811 @1903385655806996 ns -> visible_id=-1 | queued next_id=485 (readyQ=0, swappedQ~)
+[ZMQ ] received id=488, cached 2073600 bytes
+[DRAW] id=485 target_pidx+1=812 draw+swap=2.14666 ms, swappedQ=1
+[PROJ] trig #812 @1903385672489622 ns -> visible_id=485 | queued next_id=486 (readyQ=0, swappedQ~)
+[CAM ] frame #413 @1903385672501910 ns -> PROJ #812 visible_id=485 (mapped mask=486)
+[ZMQ ] received id=489, cached 2073600 bytes
+[DRAW] id=486 target_pidx+1=813 draw+swap=3.15274 ms, swappedQ=1
+[PROJ] trig #813 @1903385689172280 ns -> visible_id=486 | (no ready id; L=1)
+[ZMQ ] received id=490, cached 2073600 bytes
+[ZMQ ] received id=491, cached 2073600 bytes
+[PROJ] trig #814 @1903385705857337 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #414 @1903385705868506 ns -> PROJ #814 visible_id=-1 (mapped mask=488)
+[PROJ] trig #815 @1903385722538843 ns -> visible_id=-1 | queued next_id=488 (readyQ=0, swappedQ~)
+[ZMQ ] received id=492, cached 2073600 bytes
+[DRAW] id=488 target_pidx+1=816 draw+swap=3.8609 ms, swappedQ=1
+[ZMQ ] received id=493, cached 2073600 bytes
+[PROJ] trig #816 @1903385739226461 ns -> visible_id=488 | (no ready id; L=1)
+[CAM ] frame #415 @1903385739240189 ns -> PROJ #816 visible_id=488 (mapped mask=491)
+[PROJ] trig #817 @1903385755908223 ns -> visible_id=-1 | queued next_id=491 (readyQ=0, swappedQ~)
+[ZMQ ] received id=494, cached 2073600 bytes
+[DRAW] id=491 target_pidx+1=818 draw+swap=3.45011 ms, swappedQ=1
+[ZMQ ] received id=495, cached 2073600 bytes
+[PROJ] trig #818 @1903385772593824 ns -> visible_id=491 | (no ready id; L=1)
+[CAM ] frame #416 @1903385772606177 ns -> PROJ #818 visible_id=491 (mapped mask=493)
+[PROJ] trig #819 @1903385789277506 ns -> visible_id=-1 | queued next_id=493 (readyQ=0, swappedQ~)
+[ZMQ ] received id=496, cached 2073600 bytes
+[DRAW] id=493 target_pidx+1=820 draw+swap=5.3928 ms, swappedQ=1
+[ZMQ ] received id=497, cached 2073600 bytes
+[CAM ] frame #417 @1903385805973284 ns -> PROJ #819 visible_id=-1 (mapped mask=495)
+[PROJ] trig #820 @1903385805962020 ns -> visible_id=493 | queued next_id=495 (readyQ=0, swappedQ~)
+[DRAW] id=495 target_pidx+1=821 draw+swap=3.30611 ms, swappedQ=1
+[PROJ] trig #821 @1903385822642886 ns -> visible_id=495 | (no ready id; L=1)
+[ZMQ ] received id=498, cached 2073600 bytes
+[ZMQ ] received id=499, cached 2073600 bytes
+[CAM ] frame #418 @1903385839339240 ns -> PROJ #822 visible_id=-1 (mapped mask=497)
+[PROJ] trig #822 @1903385839327592 ns -> visible_id=-1 | queued next_id=497 (readyQ=0, swappedQ~)
+[DRAW] id=497 target_pidx+1=823 draw+swap=2.28282 ms, swappedQ=1
+[PROJ] trig #823 @1903385856019913 ns -> visible_id=497 | (no ready id; L=1)
+[ZMQ ] received id=500, cached 2073600 bytes
+[ZMQ ] received id=501, cached 2073600 bytes
+[PROJ] trig #824 @1903385872695627 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #419 @1903385872707051 ns -> PROJ #824 visible_id=-1 (mapped mask=499)
+[ZMQ ] received id=502, cached 2073600 bytes
+[PROJ] trig #825 @1903385889378317 ns -> visible_id=-1 | queued next_id=499 (readyQ=0, swappedQ~)
+[DRAW] id=499 target_pidx+1=826 draw+swap=3.66195 ms, swappedQ=1
+[ZMQ ] received id=503, cached 2073600 bytes
+[PROJ] trig #826 @1903385906061647 ns -> visible_id=499 | (no ready id; L=1)
+[CAM ] frame #420 @1903385906073231 ns -> PROJ #826 visible_id=499 (mapped mask=501)
+[PROJ] trig #827 @1903385922745072 ns -> visible_id=-1 | queued next_id=501 (readyQ=0, swappedQ~)
+[ZMQ ] received id=504, cached 2073600 bytes
+[DRAW] id=501 target_pidx+1=828 draw+swap=2.49037 ms, swappedQ=1
+[ZMQ ] received id=505, cached 2073600 bytes
+[PROJ] trig #828 @1903385939429778 ns -> visible_id=501 | (no ready id; L=1)
+[CAM ] frame #421 @1903385939441522 ns -> PROJ #828 visible_id=501 (mapped mask=503)
+[PROJ] trig #829 @1903385956114484 ns -> visible_id=-1 | queued next_id=503 (readyQ=0, swappedQ~)
+[ZMQ ] received id=506, cached 2073600 bytes
+[DRAW] id=503 target_pidx+1=830 draw+swap=3.63651 ms, swappedQ=1
+[ZMQ ] received id=507, cached 2073600 bytes
+[CAM ] frame #422 @1903385972808662 ns -> PROJ #830 visible_id=503 (mapped mask=505)
+[PROJ] trig #830 @1903385972797174 ns -> visible_id=503 | queued next_id=505 (readyQ=0, swappedQ~)
+[DRAW] id=505 target_pidx+1=831 draw+swap=6.51725 ms, swappedQ=1
+[PROJ] trig #831 @1903385989482264 ns -> visible_id=505 | (no ready id; L=1)
+[CAM ] frame #423 @1903385989493432 ns -> PROJ #831 visible_id=505 (mapped mask=507)
+[ZMQ ] received id=508, cached 2073600 bytes
+[PROJ] trig #832 @1903386006165305 ns -> visible_id=-1 | queued next_id=507 (readyQ=1, swappedQ~)
+[CAM ] frame #424 @1903386006176505 ns -> PROJ #832 visible_id=-1 (mapped mask=507)
+[ZMQ ] received id=509, cached 2073600 bytes
+[DRAW] id=507 target_pidx+1=833 draw+swap=3.35638 ms, swappedQ=1
+[ZMQ ] received id=510, cached 2073600 bytes
+[PROJ] trig #833 @1903386022850555 ns -> visible_id=507 | queued next_id=507 (readyQ=0, swappedQ~)
+[DRAW] id=507 target_pidx+1=834 draw+swap=2.22877 ms, swappedQ=1
+[ZMQ ] received id=511, cached 2073600 bytes
+[PROJ] trig #834 @1903386039531389 ns -> visible_id=507 | (no ready id; L=1)
+[CAM ] frame #425 @1903386039542941 ns -> PROJ #834 visible_id=507 (mapped mask=508)
+[ZMQ ] received id=512, cached 2073600 bytes
+[PROJ] trig #835 @1903386056215327 ns -> visible_id=-1 | queued next_id=508 (readyQ=0, swappedQ~)
+[DRAW] id=508 target_pidx+1=836 draw+swap=3.70214 ms, swappedQ=1
+[ZMQ ] received id=513, cached 2073600 bytes
+[CAM ] frame #426 @1903386072914177 ns -> PROJ #836 visible_id=508 (mapped mask=511)
+[PROJ] trig #836 @1903386072902016 ns -> visible_id=508 | queued next_id=511 (readyQ=0, swappedQ~)
+[DRAW] id=511 target_pidx+1=837 draw+swap=4.43523 ms, swappedQ=1
+[ZMQ ] received id=514, cached 2073600 bytes
+[PROJ] trig #837 @1903386089583202 ns -> visible_id=511 | (no ready id; L=1)
+[ZMQ ] received id=515, cached 2073600 bytes
+[CAM ] frame #427 @1903386106278084 ns -> PROJ #838 visible_id=-1 (mapped mask=513)
+[PROJ] trig #838 @1903386106266724 ns -> visible_id=-1 | queued next_id=513 (readyQ=0, swappedQ~)
+[DRAW] id=513 target_pidx+1=839 draw+swap=2.54374 ms, swappedQ=1
+[ZMQ ] received id=516, cached 2073600 bytes
+[PROJ] trig #839 @1903386122952838 ns -> visible_id=513 | (no ready id; L=1)
+[ZMQ ] received id=517, cached 2073600 bytes
+[CAM ] frame #428 @1903386139646760 ns -> PROJ #840 visible_id=-1 (mapped mask=515)
+[PROJ] trig #840 @1903386139635079 ns -> visible_id=-1 | queued next_id=515 (readyQ=0, swappedQ~)
+[DRAW] id=515 target_pidx+1=841 draw+swap=2.69728 ms, swappedQ=1
+[ZMQ ] received id=518, cached 2073600 bytes
+[PROJ] trig #841 @1903386156320297 ns -> visible_id=515 | (no ready id; L=1)
+[ZMQ ] received id=519, cached 2073600 bytes
+[CAM ] frame #429 @1903386173014347 ns -> PROJ #842 visible_id=-1 (mapped mask=517)
+[PROJ] trig #842 @1903386173001899 ns -> visible_id=-1 | queued next_id=517 (readyQ=0, swappedQ~)
+[DRAW] id=517 target_pidx+1=843 draw+swap=4.15568 ms, swappedQ=1
+[ZMQ ] received id=520, cached 2073600 bytes
+[PROJ] trig #843 @1903386189688525 ns -> visible_id=517 | (no ready id; L=1)
+[ZMQ ] received id=521, cached 2073600 bytes
+[CAM ] frame #430 @1903386206383311 ns -> PROJ #844 visible_id=-1 (mapped mask=519)
+[PROJ] trig #844 @1903386206369391 ns -> visible_id=-1 | queued next_id=519 (readyQ=0, swappedQ~)
+[DRAW] id=519 target_pidx+1=845 draw+swap=3.53738 ms, swappedQ=1
+[ZMQ ] received id=522, cached 2073600 bytes
+[PROJ] trig #845 @1903386223054928 ns -> visible_id=519 | (no ready id; L=1)
+[ZMQ ] received id=523, cached 2073600 bytes
+[CAM ] frame #431 @1903386239750098 ns -> PROJ #846 visible_id=-1 (mapped mask=521)
+[PROJ] trig #846 @1903386239754578 ns -> visible_id=-1 | queued next_id=521 (readyQ=0, swappedQ~)
+[DRAW] id=521 target_pidx+1=847 draw+swap=6.00864 ms, swappedQ=1
+[ZMQ ] received id=524, cached 2073600 bytes
+[PROJ] trig #847 @1903386256421684 ns -> visible_id=521 | (no ready id; L=1)
+[ZMQ ] received id=525, cached 2073600 bytes
+[PROJ] trig #848 @1903386273107478 ns -> visible_id=-1 | (no ready id; L=1)
+[CAM ] frame #432 @1903386273120406 ns -> PROJ #848 visible_id=-1 (mapped mask=523)
+[ZMQ ] received id=526, cached 2073600 bytes
+[PROJ] trig #849 @1903386289797592 ns -> visible_id=-1 | queued next_id=523 (readyQ=0, swappedQ~)
+[DRAW] id=523 target_pidx+1=850 draw+swap=2.41443 ms, swappedQ=1
+[ZMQ ] received id=527, cached 2073600 bytes
+[CAM ] frame #433 @1903386306483033 ns -> PROJ #850 visible_id=523 (mapped mask=525)
+[PROJ] trig #850 @1903386306472217 ns -> visible_id=523 | queued next_id=525 (readyQ=0, swappedQ~)
+[DRAW] id=525 target_pidx+1=851 draw+swap=4.75654 ms, swappedQ=1
+[ZMQ ] received id=528, cached 2073600 bytes
+[PROJ] trig #851 @1903386323156379 ns -> visible_id=525 | (no ready id; L=1)
+[CAM ] frame #434 @1903386323167739 ns -> PROJ #851 visible_id=525 (mapped mask=527)
+[ZMQ ] received id=529, cached 2073600 bytes
+[PROJ] trig #852 @1903386339839389 ns -> visible_id=-1 | queued next_id=527 (readyQ=1, swappedQ~)
+[CAM ] frame #435 @1903386339850173 ns -> PROJ #852 visible_id=-1 (mapped mask=528)
+[DRAW] id=527 target_pidx+1=853 draw+swap=2.55059 ms, swappedQ=1
+[ZMQ ] received id=530, cached 2073600 bytes
+[PROJ] trig #853 @1903386356523646 ns -> visible_id=527 | queued next_id=528 (readyQ=0, swappedQ~)
+[DRAW] id=528 target_pidx+1=854 draw+swap=2.39437 ms, swappedQ=1
+[ZMQ ] received id=531, cached 2073600 bytes
+[PROJ] trig #854 @1903386373207552 ns -> visible_id=528 | (no ready id; L=1)
+[CAM ] frame #436 @1903386373218688 ns -> PROJ #854 visible_id=528 (mapped mask=529)
+[ZMQ ] received id=532, cached 2073600 bytes
+[PROJ] trig #855 @1903386389889538 ns -> visible_id=-1 | queued next_id=529 (readyQ=0, swappedQ~)
+[DRAW] id=529 target_pidx+1=856 draw+swap=2.20541 ms, swappedQ=1
+[ZMQ ] received id=533, cached 2073600 bytes
+[PROJ] trig #856 @1903386406574116 ns -> visible_id=529 | (no ready id; L=1)
+[CAM ] frame #437 @1903386406589540 ns -> PROJ #856 visible_id=529 (mapped mask=531)
+[ZMQ ] received id=534, cached 2073600 bytes
+[PROJ] trig #857 @1903386423260646 ns -> visible_id=-1 | queued next_id=531 (readyQ=0, swappedQ~)
+[DRAW] id=531 target_pidx+1=858 draw+swap=2.20048 ms, swappedQ=1
+[ZMQ ] received id=535, cached 2073600 bytes
+[PROJ] trig #858 @1903386439942087 ns -> visible_id=531 | (no ready id; L=1)
+[CAM ] frame #438 @1903386439954312 ns -> PROJ #858 visible_id=531 (mapped mask=533)
+[ZMQ ] received id=536, cached 2073600 bytes
+[PROJ] trig #859 @1903386456625449 ns -> visible_id=-1 | queued next_id=533 (readyQ=0, swappedQ~)
+[DRAW] id=533 target_pidx+1=860 draw+swap=5.0881 ms, swappedQ=1
+[ZMQ ] received id=537, cached 2073600 bytes
+[PROJ] trig #860 @1903386473308811 ns -> visible_id=533 | (no ready id; L=1)
+[CAM ] frame #439 @1903386473323371 ns -> PROJ #860 visible_id=533 (mapped mask=535)
+[ZMQ ] received id=538, cached 2073600 bytes
+[PROJ] trig #861 @1903386489993997 ns -> visible_id=-1 | queued next_id=535 (readyQ=0, swappedQ~)
+[DRAW] id=535 target_pidx+1=862 draw+swap=2.2319 ms, swappedQ=1
+[ZMQ ] received id=539, cached 2073600 bytes
+[PROJ] trig #862 @1903386506676878 ns -> visible_id=535 | (no ready id; L=1)
+[CAM ] frame #440 @1903386506689359 ns -> PROJ #862 visible_id=535 (mapped mask=537)
+[ZMQ ] received id=540, cached 2073600 bytes
+[PROJ] trig #863 @1903386523360624 ns -> visible_id=-1 | queued next_id=537 (readyQ=0, swappedQ~)
+[DRAW] id=537 target_pidx+1=864 draw+swap=4.60598 ms, swappedQ=1
+[ZMQ ] received id=541, cached 2073600 bytes
+[PROJ] trig #864 @1903386540043986 ns -> visible_id=537 | (no ready id; L=1)
+[CAM ] frame #441 @1903386540058834 ns -> PROJ #864 visible_id=537 (mapped mask=539)
+[ZMQ ] received id=542, cached 2073600 bytes
+[PROJ] trig #865 @1903386556731092 ns -> visible_id=-1 | queued next_id=539 (readyQ=0, swappedQ~)
+[DRAW] id=539 target_pidx+1=866 draw+swap=5.06464 ms, swappedQ=1
+[ZMQ ] received id=543, cached 2073600 bytes
+[PROJ] trig #866 @1903386573412758 ns -> visible_id=539 | (no ready id; L=1)
+[CAM ] frame #442 @1903386573424374 ns -> PROJ #866 visible_id=539 (mapped mask=541)
+[ZMQ ] received id=544, cached 2073600 bytes
+[PROJ] trig #867 @1903386590096023 ns -> visible_id=-1 | queued next_id=541 (readyQ=0, swappedQ~)
+[DRAW] id=541 target_pidx+1=868 draw+swap=2.26787 ms, swappedQ=1
+[ZMQ ] received id=545, cached 2073600 bytes
+[PROJ] trig #868 @1903386606780217 ns -> visible_id=541 | (no ready id; L=1)
+[CAM ] frame #443 @1903386606791289 ns -> PROJ #868 visible_id=541 (mapped mask=543)
+[ZMQ ] received id=546, cached 2073600 bytes
+[PROJ] trig #869 @1903386623462395 ns -> visible_id=-1 | queued next_id=543 (readyQ=0, swappedQ~)
+[DRAW] id=543 target_pidx+1=870 draw+swap=5.43805 ms, swappedQ=1
+[ZMQ ] received id=547, cached 2073600 bytes
+[PROJ] trig #870 @1903386640145565 ns -> visible_id=543 | (no ready id; L=1)
+[CAM ] frame #444 @1903386640155613 ns -> PROJ #870 visible_id=543 (mapped mask=545)
+[ZMQ ] received id=548, cached 2073600 bytes
+[PROJ] trig #871 @1903386656829278 ns -> visible_id=-1 | queued next_id=545 (readyQ=0, swappedQ~)
+[DRAW] id=545 target_pidx+1=872 draw+swap=2.3079 ms, swappedQ=1
+[ZMQ ] received id=549, cached 2073600 bytes
+[PROJ] trig #872 @1903386673513984 ns -> visible_id=545 | (no ready id; L=1)
+[CAM ] frame #445 @1903386673525312 ns -> PROJ #872 visible_id=545 (mapped mask=547)
+[ZMQ ] received id=550, cached 2073600 bytes
+[PROJ] trig #873 @1903386690198594 ns -> visible_id=-1 | queued next_id=547 (readyQ=0, swappedQ~)
+[DRAW] id=547 target_pidx+1=874 draw+swap=2.51488 ms, swappedQ=1
+[ZMQ ] received id=551, cached 2073600 bytes
+[PROJ] trig #874 @1903386706881860 ns -> visible_id=547 | (no ready id; L=1)
+[CAM ] frame #446 @1903386706893028 ns -> PROJ #874 visible_id=547 (mapped mask=549)
+[ZMQ ] received id=552, cached 2073600 bytes
+[PROJ] trig #875 @1903386723564997 ns -> visible_id=-1 | queued next_id=549 (readyQ=0, swappedQ~)
+[DRAW] id=549 target_pidx+1=876 draw+swap=4.8399 ms, swappedQ=1
+[ZMQ ] received id=553, cached 2073600 bytes
+[PROJ] trig #876 @1903386740250631 ns -> visible_id=549 | (no ready id; L=1)
+[CAM ] frame #447 @1903386740262535 ns -> PROJ #876 visible_id=549 (mapped mask=551)
+[ZMQ ] received id=554, cached 2073600 bytes
+[PROJ] trig #877 @1903386756935241 ns -> visible_id=-1 | queued next_id=551 (readyQ=0, swappedQ~)
+[DRAW] id=551 target_pidx+1=878 draw+swap=3.2167 ms, swappedQ=1
+[ZMQ ] received id=555, cached 2073600 bytes
+[PROJ] trig #878 @1903386773617163 ns -> visible_id=551 | (no ready id; L=1)
+[CAM ] frame #448 @1903386773628651 ns -> PROJ #878 visible_id=551 (mapped mask=553)
+[ZMQ ] received id=556, cached 2073600 bytes
+[PROJ] trig #879 @1903386790300909 ns -> visible_id=-1 | queued next_id=553 (readyQ=0, swappedQ~)
+[DRAW] id=553 target_pidx+1=880 draw+swap=2.272 ms, swappedQ=1
+[ZMQ ] received id=557, cached 2073600 bytes
+[PROJ] trig #880 @1903386806984878 ns -> visible_id=553 | (no ready id; L=1)
+[CAM ] frame #449 @1903386806996494 ns -> PROJ #880 visible_id=553 (mapped mask=555)
+[ZMQ ] received id=558, cached 2073600 bytes
+[PROJ] trig #881 @1903386823667760 ns -> visible_id=-1 | queued next_id=555 (readyQ=0, swappedQ~)
+[DRAW] id=555 target_pidx+1=882 draw+swap=2.2145 ms, swappedQ=1
+[ZMQ ] received id=559, cached 2073600 bytes
+[PROJ] trig #882 @1903386840351634 ns -> visible_id=555 | (no ready id; L=1)
+[CAM ] frame #450 @1903386840364082 ns -> PROJ #882 visible_id=555 (mapped mask=557)
+[ZMQ ] received id=560, cached 2073600 bytes
+[PROJ] trig #883 @1903386857034516 ns -> visible_id=-1 | queued next_id=557 (readyQ=0, swappedQ~)
+[DRAW] id=557 target_pidx+1=884 draw+swap=2.34358 ms, swappedQ=1
+[ZMQ ] received id=561, cached 2073600 bytes
+[PROJ] trig #884 @1903386873719509 ns -> visible_id=557 | (no ready id; L=1)
+[CAM ] frame #451 @1903386873733462 ns -> PROJ #884 visible_id=557 (mapped mask=559)
+[ZMQ ] received id=562, cached 2073600 bytes
+[PROJ] trig #885 @1903386890403383 ns -> visible_id=-1 | queued next_id=559 (readyQ=0, swappedQ~)
+[DRAW] id=559 target_pidx+1=886 draw+swap=3.62038 ms, swappedQ=1
+[ZMQ ] received id=563, cached 2073600 bytes
+[PROJ] trig #886 @1903386907088025 ns -> visible_id=559 | (no ready id; L=1)
+[CAM ] frame #452 @1903386907101177 ns -> PROJ #886 visible_id=559 (mapped mask=561)
+[PROJ] trig #887 @1903386923770139 ns -> visible_id=-1 | queued next_id=561 (readyQ=0, swappedQ~)
+[CAM ] frame #453 @1903386940466493 ns -> PROJ #887 visible_id=-1 (mapped mask=563)
+Bye.
