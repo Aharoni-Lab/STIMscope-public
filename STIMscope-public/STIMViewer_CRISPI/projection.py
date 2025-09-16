@@ -88,14 +88,22 @@ class ProjectDisplay(QMainWindow):
 
     def show_image_fullscreen_on_second_monitor(self, image_bgr: np.ndarray, homography_matrix=None):
         try:
-            img = image_bgr
-            if isinstance(homography_matrix, np.ndarray) and homography_matrix.shape == (3, 3):
-                W, H = self._proj_size()
-                img = cv2.warpPerspective(
-                    img, homography_matrix, (W, H),
-                    flags=cv2.INTER_LINEAR,
-                    borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
-                )
+            W, H = self._proj_size()
+            H_eff = homography_matrix if (isinstance(homography_matrix, np.ndarray) and homography_matrix.shape == (3, 3)) else np.eye(3, dtype=np.float64)
+
+            # Always warp to projector resolution with provided or identity homography (keep BGR)
+            img = cv2.warpPerspective(
+                image_bgr, H_eff, (W, H),
+                flags=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
+            )
+
+            # Optics compensation: flip horizontally at display stage
+            try:
+                img = cv2.flip(img, 1)
+            except Exception:
+                pass
+
             self.update_image(img)
         except Exception as e:
             print(f"show_image_fullscreen_on_second_monitor error: {e}")
@@ -108,6 +116,20 @@ class ProjectDisplay(QMainWindow):
             self.label.setPixmap(QPixmap.fromImage(qimg))
         except Exception as e:
             print(f"show_solid_fullscreen error: {e}")
+
+    def show_image_raw_no_warp_no_flip(self, image_bgr: np.ndarray):
+        """Display image directly (no homography, no horizontal flip)."""
+        try:
+            # Bypass scaling to preserve 1:1 pixels for structured-light/LUT
+            qimg = _to_qimage_rgb(image_bgr)
+            if qimg is None:
+                print("show_image_raw_no_warp_no_flip: invalid image input"); return
+            pm = QPixmap.fromImage(qimg)
+            # Ensure we do not scale the pixmap
+            self.label.setScaledContents(False)
+            self.label.setPixmap(pm)
+        except Exception as e:
+            print(f"show_image_raw_no_warp_no_flip error: {e}")
 
     def closeEvent(self, event):
         try:

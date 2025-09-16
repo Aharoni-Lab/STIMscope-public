@@ -996,11 +996,18 @@ class OptimizedCamera(QObject):
 
                 H = find_homography()
                 if H is not None:
-                    self.translation_matrix = H
+                    self.translation_matrix = H  # keep raw H
                     img_path = _assets_path("Generated", "custom_registration_image.png")
                     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
                     if img is not None:
-                        self._safe_project(img, H)
+                        try:
+                            # Always project using H (not inverse)
+                            Hn = H / H[2, 2] if abs(H[2, 2]) > 1e-12 else H
+                            print("📽️ Projecting with H for confirmation...")
+                            self._safe_project(img, Hn)
+                        except Exception as ewarp:
+                            print(f"⚠️ Projection with H failed ({ewarp}); projecting image without warp")
+                            self._safe_project(img, None)
                     print("✅ Homography Computed Successfully!")
             except Exception as e:
                 print(f"❌ Homography error: {e}")

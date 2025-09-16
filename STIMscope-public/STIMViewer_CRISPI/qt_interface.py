@@ -72,7 +72,7 @@ class Interface(QtWidgets.QMainWindow):
         self._qt_instance.aboutToQuit.connect(self._close)
 
         # No minimum size restriction - allow window to be resized freely
-        self.setWindowTitle("STIMViewer")
+        self.setWindowTitle("STIMViewer - Modern Interface")
         
         # Set window icon if available
         icon_path = self._findprinto()
@@ -228,8 +228,14 @@ class Interface(QtWidgets.QMainWindow):
         self._button_calibrate = QtWidgets.QPushButton("Calibrate")
         self._button_calibrate.clicked.connect(self._calibrate)
 
+        # Structured-Light calibration & projection buttons
+        self._button_sl_calibrate = QtWidgets.QPushButton("Structured-Light Calibrate")
+        self._button_sl_calibrate.clicked.connect(self._sl_calibrate)
+        self._button_sl_project_reg = QtWidgets.QPushButton("Project LUT-Warped Registration")
+        self._button_sl_project_reg.clicked.connect(self._sl_project_registration)
+
         # Project intensity controls
-        self._project_intensity_label = QtWidgets.QLabel("Project Intensity:")
+        self._project_intensity_label = QtWidgets.QLabel("<b>Project Intensity:</b>")
         self._project_intensity_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
         self._project_intensity_slider.setRange(0, 255)
         self._project_intensity_slider.setValue(255)
@@ -248,13 +254,13 @@ class Interface(QtWidgets.QMainWindow):
         self._button_project_off.clicked.connect(self._project_off)
 
         # Camera type selection
-        self._camera_type_label = QtWidgets.QLabel("Camera Type:")
+        self._camera_type_label = QtWidgets.QLabel("<b>Camera Type:</b>")
         self.camera_type_dropdown = QtWidgets.QComboBox()
         self.camera_type_dropdown.addItems(["IDS_Peak", "MIPI", "Generic Camera"])
         self.camera_type_dropdown.setCurrentText(self.selected_camera_type)
         self.camera_type_dropdown.currentTextChanged.connect(self._on_camera_type_changed)
 
-        self._gain_label = QtWidgets.QLabel("Gain:")
+        self._gain_label = QtWidgets.QLabel("<b>Gain:</b>")
         self._gain_label.setMaximumWidth(70)
 
         self._gain_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical)
@@ -264,7 +270,7 @@ class Interface(QtWidgets.QMainWindow):
 
         
 
-        self._dgain_label = QtWidgets.QLabel("DGain:")
+        self._dgain_label = QtWidgets.QLabel("<b>DGain:</b>")
         self._dgain_label.setMaximumWidth(70)
 
         self._dgain_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical)
@@ -299,6 +305,8 @@ class Interface(QtWidgets.QMainWindow):
         # Row 0: Main action buttons
         config_layout.addWidget(self._button_start_hardware_acquisition, 0, 0)
         config_layout.addWidget(self._button_calibrate,                  0, 1)
+        config_layout.addWidget(self._button_sl_calibrate,               0, 2)
+        config_layout.addWidget(self._button_sl_project_reg,             0, 3)
         
         # Row 1: Project intensity controls (label, slider, value in one row)
         project_controls_layout = QtWidgets.QHBoxLayout()
@@ -765,15 +773,32 @@ class Interface(QtWidgets.QMainWindow):
             return
         try:
             img_path = ASSETS / "Generated" / "custom_registration_image.png"
-            if not img_path.exists():
+            scr = self.projection.windowHandle().screen() if self.projection.windowHandle() else None
+            geo = scr.geometry() if scr else None
+            target_w = geo.width() if geo else 1920
+            target_h = geo.height() if geo else 1080
 
+            # Always regenerate the calibration image to ensure latest ArUco markers are present
+            regen_needed = True
+            if img_path.exists():
                 try:
-                    from calibration import create_custom_registration_image
-                    scr = self.projection.windowHandle().screen() if self.projection.windowHandle() else None
-                    geo = scr.geometry() if scr else None
-                    w = geo.width() if geo else 1920
-                    h = geo.height() if geo else 1080
-                    create_custom_registration_image(w, h, (255, 255, 255), (255, 255, 255))
+                    probe = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+                    if probe is None:
+                        regen_needed = True
+                    else:
+                        ph, pw = probe.shape[:2]
+                        if pw != target_w or ph != target_h:
+                            print(f"ℹ️ Registration size mismatch ({pw}x{ph}) != projector ({target_w}x{target_h}), regenerating...")
+                            regen_needed = True
+                except Exception:
+                    regen_needed = True
+            else:
+                regen_needed = True
+
+            if regen_needed:
+                try:
+                    from calibration import create_charuco_registration_image
+                    create_charuco_registration_image(target_w, target_h)
                     print(f"✅ Custom registration image generated: {img_path}")
                 except Exception as e:
                     print(f"Failed to generate registration image: {e}")
@@ -790,7 +815,8 @@ class Interface(QtWidgets.QMainWindow):
             print("projectionnnnnn")
 
 
-            QtCore.QTimer.singleShot(150, lambda: getattr(self._camera, "start_calibration", lambda: None)())
+            # Allow time for projector to refresh and camera to capture a few frames
+            QtCore.QTimer.singleShot(250, lambda: getattr(self._camera, "start_calibration", lambda: None)())
         except Exception as e:
             print(f"Calibration start failed: {e}")
 
@@ -830,7 +856,130 @@ class Interface(QtWidgets.QMainWindow):
             
         except Exception as e:
             print(f"_project_off failed: {e}")
+
+    def _sl_calibrate(self):
+        """Run Structured-Light (Gray-code) calibration end-to-end."""
+        try:
+            from calibration import generate_gray_code_patterns, save_gray_code_patterns, decode_gray_code_from_files, invert_cam_to_proj_lut
+        except Exception as e:
+            print(f"Structured-light not available: {e}")
+            return
+
+        if not self._ensure_projection():
+            print("Projection window unavailable.")
+            return
+
+        # 1) Generate patterns at projector resolution
+        try:
+            scr = self.projection.windowHandle().screen() if self.projection.windowHandle() else None
+            geo = scr.geometry() if scr else None
+            proj_w = geo.width() if geo else 1920
+            proj_h = geo.height() if geo else 1080
+            patterns = generate_gray_code_patterns(proj_w, proj_h)
+            pattern_paths = save_gray_code_patterns(patterns)
+            print(f"Generated {len(pattern_paths)} Gray-code patterns")
+        except Exception as e:
+            print(f"Failed to generate patterns: {e}")
+            return
+
+        # 2) Project each pattern and capture a camera frame
+        capture_paths = []
+        for idx, (ppath, meta) in enumerate(zip(pattern_paths, patterns)):
+            try:
+                img = cv2.imread(ppath, cv2.IMREAD_COLOR)
+                if img is None:
+                    continue
+                # Display raw (no warp, no flip) to ensure LUT decodes pure geometry; flip is not desired here
+                try:
+                    self.projection.show_image_raw_no_warp_no_flip(img)
+                except Exception:
+                    # Fallback to normal path
+                    self.projection.show_image_fullscreen_on_second_monitor(img, None)
+                # Allow projector refresh
+                QtCore.QCoreApplication.processEvents()
+                QtCore.QThread.msleep(40)
+                # Capture a frame
+                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                os.makedirs(save_dir, exist_ok=True)
+                cap_path = os.path.join(save_dir, f"sl_cap_{idx:03d}.png")
+                if hasattr(self._camera, "snapshot"):
+                    self._camera.snapshot(cap_path)
+                    capture_paths.append(cap_path)
+                else:
+                    # As a fallback, mark missing
+                    capture_paths.append("")
+            except Exception as e:
+                print(f"Pattern {idx} projection/capture failed: {e}")
+
+        # 3) Decode LUTs
+        try:
+            # Read a recent frame to get camera size if possible
+            cam_h, cam_w = 1080, 1920
+            for fp in reversed(capture_paths):
+                if not fp:
+                    continue
+                img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
+                if img is not None:
+                    cam_h, cam_w = img.shape[:2]
+                    break
+            proj_x_of_cam, proj_y_of_cam = decode_gray_code_from_files(capture_paths, patterns, cam_h, cam_w, proj_w, proj_h)
+            np.save("/".join([self._camera.asset_dir, "proj_from_cam_x.npy"]), proj_x_of_cam)
+            np.save("/".join([self._camera.asset_dir, "proj_from_cam_y.npy"]), proj_y_of_cam)
+            inv_x, inv_y = invert_cam_to_proj_lut(proj_x_of_cam, proj_y_of_cam, proj_w, proj_h)
+            np.save("/".join([self._camera.asset_dir, "cam_from_proj_x.npy"]), inv_x)
+            np.save("/".join([self._camera.asset_dir, "cam_from_proj_y.npy"]), inv_y)
+            print("✅ Structured-light LUTs saved")
+        except Exception as e:
+            print(f"Structured-light decoding failed: {e}")
     
+    def _sl_project_registration(self):
+        """Prewarp and project the custom registration image using LUTs."""
+        try:
+            from calibration import prewarp_with_inverse_lut
+        except Exception as e:
+            print(f"Structured-light prewarp not available: {e}")
+            return
+        if not self._ensure_projection():
+            print("Projection window unavailable.")
+            return
+        try:
+            # Load LUTs
+            asset_dir = getattr(self._camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+            inv_x = np.load("/".join([asset_dir, "cam_from_proj_x.npy"]))
+            inv_y = np.load("/".join([asset_dir, "cam_from_proj_y.npy"]))
+            proj_h, proj_w = inv_x.shape[:2]
+            # Load registration image in camera space (same as camera preview size preferred). If sizes differ, we will scale.
+            img_path = (Path(asset_dir).parent / "Generated" / "custom_registration_image.png").resolve()
+            img = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+            if img is None:
+                print(f"Registration image not readable: {img_path}")
+                return
+            # Resize registration to camera frame size if we can detect it from a snapshot
+            cam_h, cam_w = img.shape[:2]
+            try:
+                # Try loading a recent snapshot to infer true camera dims
+                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                candidates = sorted([p for p in os.listdir(save_dir) if p.endswith('.png')])
+                for name in reversed(candidates):
+                    probe = cv2.imread(os.path.join(save_dir, name), cv2.IMREAD_GRAYSCALE)
+                    if probe is not None:
+                        cam_h, cam_w = probe.shape[:2]
+                        break
+                if (img.shape[1], img.shape[0]) != (cam_w, cam_h):
+                    img = cv2.resize(img, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
+            except Exception:
+                pass
+            # Prewarp
+            warped = prewarp_with_inverse_lut(img, inv_x, inv_y, proj_w, proj_h)
+            # Project raw without flip/warp for LUT-based path (LUT already maps correctly)
+            try:
+                self.projection.show_image_raw_no_warp_no_flip(warped)
+            except Exception:
+                self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            print("✅ Projected LUT-prewarped registration")
+        except Exception as e:
+            print(f"LUT projection failed: {e}")
+
     def _project_with_intensity(self, intensity):
         """Project a solid color with the specified intensity (0-255)."""
         try:
