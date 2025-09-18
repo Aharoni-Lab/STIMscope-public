@@ -26,6 +26,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <cmath>
 
 #define WIDTH  1920
 #define HEIGHT 1080
@@ -68,9 +69,9 @@ static bool        VISIBLE_ID     = true;     // draw overlay
 // overlay options
 // OVERLAY_STYLE: 0 barcode, 1 digits
 static int  OVERLAY_STYLE = 1;
-static int  OVERLAY_CELL  = 32;     // scale unit in pixels
-static int  OVERLAY_OFF_X = 220;    // offset from left in pixels
-static int  OVERLAY_OFF_Y = 180;    // offset from top in pixels
+static int  OVERLAY_CELL  = 12;     // scale unit in pixels (smaller digits)
+static int  OVERLAY_OFF_X = 520;    // offset from left in pixels
+static int  OVERLAY_OFF_Y = 380;    // offset from top in pixels
 static bool OVERLAY_BG    = true;   // black background plate
 
 // bottom row mode: 0 mask id, 1 proj index, 2 none
@@ -83,6 +84,16 @@ static int      CAM_WARMUP      = 10;  // number of initial cam triggers to trea
 
 // CSV output (always saved as "mask_map.csv" in CWD unless overridden)
 static std::string MAP_CSV_PATH = "mask_map.csv";
+
+// ---------- homography (H) reception and mapping ----------
+static std::string ZMQ_H_BIND   = "tcp://*:5560"; // REP endpoint to receive 3x3 H (float64[9])
+static int         HORIZ_FLIP   = 1;              // 1 = mirror horizontally after warp (to match Python path)
+static std::string H_FILE_PATH  = "";            // optional on-disk H preload (text with 9 doubles)
+
+static std::mutex           g_h_mtx;
+static double               g_H[9]       = {1,0,0, 0,1,0, 0,0,1};
+static std::vector<int>     g_h_src_idx;          // size WIDTH*HEIGHT, maps dst idx -> src idx (-1 if oob)
+static std::atomic<bool>    g_h_ready{false};
 
 // ---------- shared state ----------
 static std::atomic<bool> g_running{true};
@@ -190,6 +201,101 @@ static void draw_mask_pixels(const void* data, int w, int h){
     glPixelZoom(1.0f, -1.0f);               // flip vertical, top left origin masks
     glRasterPos2f(-1.f, 1.f);               // top left
     glDrawPixels(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+}
+
+// ---------- homography helpers ----------
+static bool invert_3x3(const double M[9], double Inv[9]){
+    double a = M[0], b = M[1], c = M[2];
+    double d = M[3], e = M[4], f = M[5];
+    double g = M[6], h = M[7], i = M[8];
+    double A =   (e*i - f*h);
+    double B = - (d*i - f*g);
+    double C =   (d*h - e*g);
+    double D = - (b*i - c*h);
+    double E =   (a*i - c*g);
+    double F = - (a*h - b*g);
+    double G =   (b*f - c*e);
+    double H = - (a*f - c*d);
+    double I =   (a*e - b*d);
+    double det = a*A + b*B + c*C;
+    if (std::fabs(det) < 1e-12) return false;
+    double invdet = 1.0 / det;
+    Inv[0] = A * invdet; Inv[1] = D * invdet; Inv[2] = G * invdet;
+    Inv[3] = B * invdet; Inv[4] = E * invdet; Inv[5] = H * invdet;
+    Inv[6] = C * invdet; Inv[7] = F * invdet; Inv[8] = I * invdet;
+    return true;
+}
+
+static void precompute_h_map_unlocked(){
+    // pre: g_H already set, lock held
+    double Hin[9];
+    if (!invert_3x3(g_H, Hin)){
+        g_h_src_idx.clear();
+        g_h_ready.store(false);
+        LOG("[HMAP] singular H, disabled mapping\n");
+        return;
+    }
+    g_h_src_idx.assign((size_t)WIDTH * (size_t)HEIGHT, -1);
+    const int W = WIDTH, Ht = HEIGHT;
+    for (int y = 0; y < Ht; ++y){
+        for (int x = 0; x < W; ++x){
+            // Optional horizontal flip at display stage (match Python path)
+            int xd = HORIZ_FLIP ? (W - 1 - x) : x;
+            double X = (double)xd;
+            double Y = (double)y;
+            double denom = Hin[6]*X + Hin[7]*Y + Hin[8];
+            if (std::fabs(denom) < 1e-12){
+                continue;
+            }
+            double xs = (Hin[0]*X + Hin[1]*Y + Hin[2]) / denom;
+            double ys = (Hin[3]*X + Hin[4]*Y + Hin[5]) / denom;
+            int xi = (int)std::llround(xs);
+            int yi = (int)std::llround(ys);
+            if (xi >= 0 && xi < W && yi >= 0 && yi < Ht){
+                size_t dst_idx = (size_t)y * (size_t)W + (size_t)x;
+                size_t src_idx = (size_t)yi * (size_t)W + (size_t)xi;
+                g_h_src_idx[dst_idx] = (int)src_idx;
+            }
+        }
+    }
+    g_h_ready.store(true);
+    LOG("[HMAP] precomputed mapping (", W, "x", Ht, ")\n");
+}
+
+static void warp_mask_nn(const unsigned char* src, std::vector<unsigned char>& dst){
+    if (!src){
+        dst.assign((size_t)WIDTH * (size_t)HEIGHT, 0);
+        return;
+    }
+    const size_t N = (size_t)WIDTH * (size_t)HEIGHT;
+    if (dst.size() != N) dst.resize(N);
+    // No lock here: we only read g_h_src_idx which is replaced atomically under lock before ready flag set
+    for (size_t i = 0; i < N; ++i){
+        int si = (i < g_h_src_idx.size()) ? g_h_src_idx[i] : -1;
+        dst[i] = (si >= 0) ? src[(size_t)si] : 0;
+    }
+}
+
+static bool load_h_from_text_file(const std::string& path){
+    std::ifstream f(path.c_str());
+    if (!f.is_open()){
+        LOG("[HMAP] cannot open H file ", path, "\n");
+        return false;
+    }
+    double vals[9];
+    for (int k=0;k<9;++k){
+        if (!(f >> vals[k])){
+            LOG("[HMAP] failed to read 9 doubles from ", path, "\n");
+            return false;
+        }
+    }
+    {
+        std::lock_guard<std::mutex> lk(g_h_mtx);
+        for (int k=0;k<9;++k) g_H[k] = vals[k];
+        precompute_h_map_unlocked();
+    }
+    LOG("[HMAP] preloaded H from ", path, "\n");
+    return true;
 }
 
 // ---------- overlay builders ----------
@@ -336,6 +442,71 @@ static void draw_overlay_pixels(const unsigned char* px, int ow, int oh, int off
     glMatrixMode(GL_MODELVIEW);
 }
 
+// ---------- overlay composition helpers (CPU) ----------
+static void blit_onto_fullscreen(std::vector<unsigned char>& full, int W, int H,
+                                 const std::vector<unsigned char>& small, int ow, int oh,
+                                 int offX, int offY){
+    if (ow <= 0 || oh <= 0) return;
+    for (int y = 0; y < oh; ++y){
+        int dy = offY + y;
+        if (dy < 0 || dy >= H) continue;
+        int sy = y;
+        int sx0 = 0;
+        int dx0 = offX;
+        int run = ow;
+        // clip left
+        if (dx0 < 0){
+            sx0 -= dx0; run += dx0; dx0 = 0;
+        }
+        // clip right
+        if (dx0 + run > W){
+            run = W - dx0;
+        }
+        if (run <= 0) continue;
+        const unsigned char* src = small.data() + (size_t)sy * (size_t)ow + (size_t)sx0;
+        unsigned char* dst = full.data() + (size_t)dy * (size_t)W + (size_t)dx0;
+        std::memcpy(dst, src, (size_t)run);
+    }
+}
+
+static void composite_overlay_cpu(std::vector<unsigned char>& base, // full-screen
+                                  const std::vector<unsigned char>& small, int ow, int oh,
+                                  int offX, int offY,
+                                  bool apply_black_plate){
+    const int W = WIDTH, H = HEIGHT;
+    if (ow <= 0 || oh <= 0) return;
+    if ((int)base.size() != W*H) base.resize((size_t)W*(size_t)H);
+
+    // Optional: black plate behind overlay area (unwarped path)
+    if (apply_black_plate){
+        for (int y = 0; y < oh; ++y){
+            int dy = offY + y;
+            if (dy < 0 || dy >= H) continue;
+            int dx0 = offX;
+            int run = ow;
+            if (dx0 < 0){ run += dx0; dx0 = 0; }
+            if (dx0 + run > W){ run = W - dx0; }
+            if (run <= 0) continue;
+            unsigned char* dst = base.data() + (size_t)dy * (size_t)W + (size_t)dx0;
+            std::memset(dst, 0, (size_t)run);
+        }
+    }
+    // Bright digits: max blend
+    for (int y = 0; y < oh; ++y){
+        int dy = offY + y;
+        if (dy < 0 || dy >= H) continue;
+        int sx0 = 0;
+        int dx0 = offX;
+        int run = ow;
+        if (dx0 < 0){ sx0 -= dx0; run += dx0; dx0 = 0; }
+        if (dx0 + run > W){ run = W - dx0; }
+        if (run <= 0) continue;
+        const unsigned char* src = small.data() + (size_t)y * (size_t)ow + (size_t)sx0;
+        unsigned char* dst = base.data() + (size_t)dy * (size_t)W + (size_t)dx0;
+        for (int i = 0; i < run; ++i){ dst[i] = std::max(dst[i], src[i]); }
+    }
+}
+
 // ---------- GPIO helpers ----------
 static gpiod_line* request_edge_line(const std::string& chip_path, int line, Edge e, const char* tag){
     gpiod_chip* chip = gpiod_chip_open(chip_path.c_str());
@@ -453,6 +624,66 @@ static void zmq_thread_func(){
     ctx.close();
 }
 
+static void h_zmq_thread_func(){
+    zmq::context_t ctx(1);
+    zmq::socket_t  rep(ctx, ZMQ_REP);
+    int rcvtimeo = 200; rep.setsockopt(ZMQ_RCVTIMEO, &rcvtimeo, sizeof(rcvtimeo));
+    int sndtimeo = 200; rep.setsockopt(ZMQ_SNDTIMEO, &sndtimeo, sizeof(sndtimeo));
+    int linger   = 0;   rep.setsockopt(ZMQ_LINGER,   &linger,   sizeof(linger));
+
+    try { rep.bind(ZMQ_H_BIND); }
+    catch (const zmq::error_t& e){ LOG("[ERR ] ZMQ H bind failed ", ZMQ_H_BIND, " ", e.what(), "\n"); return; }
+    LOG("[HMAP] Listening for H on ", ZMQ_H_BIND, "\n");
+
+    while (g_running.load()){
+        zmq::message_t p1;
+        auto ok1 = rep.recv(p1, zmq::recv_flags::none);
+        if (!ok1){ continue; }
+
+        int more = 0; size_t moresz = sizeof(more);
+        rep.getsockopt(ZMQ_RCVMORE, &more, &moresz);
+
+        std::string tag(static_cast<const char*>(p1.data()), p1.size());
+        if (tag == "H" && more){
+            zmq::message_t p2;
+            auto ok2 = rep.recv(p2, zmq::recv_flags::none);
+            if (!ok2){
+                zmq::message_t reply(3); std::memcpy(reply.data(), "ERR", 3); rep.send(reply, zmq::send_flags::none); continue;
+            }
+            if (p2.size() != 9*sizeof(double)){
+                zmq::message_t reply(3); std::memcpy(reply.data(), "BAD", 3); rep.send(reply, zmq::send_flags::none); continue;
+            }
+            {
+                std::lock_guard<std::mutex> lk(g_h_mtx);
+                std::memcpy(g_H, p2.data(), 9*sizeof(double));
+                precompute_h_map_unlocked();
+            }
+            zmq::message_t reply(2); std::memcpy(reply.data(), "OK", 2); rep.send(reply, zmq::send_flags::none);
+        } else if (!more){
+            // Single-part control messages: "IDENTITY" to clear mapping
+            if (tag == "IDENTITY"){
+                std::lock_guard<std::mutex> lk(g_h_mtx);
+                for (int k=0;k<9;++k) g_H[k] = (k%4==0)?1.0:0.0;
+                g_h_src_idx.clear();
+                g_h_ready.store(false);
+                zmq::message_t reply(2); std::memcpy(reply.data(), "OK", 2); rep.send(reply, zmq::send_flags::none);
+            } else {
+                zmq::message_t reply(3); std::memcpy(reply.data(), "ERR", 3); rep.send(reply, zmq::send_flags::none);
+            }
+        } else {
+            // Drain any remaining parts
+            while (rep.getsockopt(ZMQ_RCVMORE, &more, &moresz), more){
+                zmq::message_t d;
+                (void)rep.recv(d, zmq::recv_flags::none);
+            }
+            zmq::message_t reply(3); std::memcpy(reply.data(), "ERR", 3); rep.send(reply, zmq::send_flags::none);
+        }
+    }
+
+    rep.close();
+    ctx.close();
+}
+
 static void camera_thread_func(){
     gpiod_line* line = request_edge_line(CAM_TRIG_CHIP, CAM_TRIG_LINE, CAM_EDGE, "cam");
     if (!line){ LOG("[CAM ] failed to arm\n"); return; }
@@ -519,7 +750,7 @@ static void camera_thread_func(){
         if (csv.is_open()){
             if (saved_mask >= 0){
                 std::lock_guard<std::mutex> lk(csv_mtx);
-                long long out_cam_idx = (long long)idx - CAM_WARMUP;
+                long long out_cam_idx = (long long)idx - CAM_WARMUP-1;
                 if (out_cam_idx >= 1){
                     csv << saved_mask << "," << out_cam_idx << "\n"; // start at 1 after warm-up
                 } else {
@@ -633,6 +864,9 @@ static void parse_cli(int argc, char** argv){
         else if (starts("--map-eps-us="))       MAP_EPS_US       = safe_stoll(a.substr(13), MAP_EPS_US, "map-eps-us");
         else if (starts("--map-csv="))          MAP_CSV_PATH     = trim(a.substr(10));
         else if (starts("--cam-warmup="))       CAM_WARMUP       = safe_stoi(a.substr(12), CAM_WARMUP, "cam-warmup");
+        else if (starts("--h-bind="))           ZMQ_H_BIND       = trim(a.substr(9));
+        else if (starts("--horiz-flip="))       HORIZ_FLIP       = safe_stoi(a.substr(13), HORIZ_FLIP, "horiz-flip");
+        else if (starts("--h-file="))           H_FILE_PATH      = trim(a.substr(9));
 
         else if (a=="-h" || a=="--help"){
             std::cout <<
@@ -676,7 +910,9 @@ static void parse_cli(int argc, char** argv){
         " , cam-ts-offset-us=", CAM_TS_OFFSET_US,
         " , map-eps-us=", MAP_EPS_US,
         " , map-csv=", MAP_CSV_PATH,
-        " , cam-warmup=", CAM_WARMUP, "\n");
+        " , cam-warmup=", CAM_WARMUP,
+        " , h-bind=", ZMQ_H_BIND,
+        " , horiz-flip=", HORIZ_FLIP, "\n");
 }
 
 // ---------- monitor pick ----------
@@ -705,8 +941,14 @@ static void on_sig(int){ g_running.store(false); if (g_win) glfwPostEmptyEvent()
 int main(int argc, char** argv){
     parse_cli(argc, argv);
 
+    // If an on-disk H file is provided, preload it before threads/GL start
+    if (!H_FILE_PATH.empty()){
+        load_h_from_text_file(H_FILE_PATH);
+    }
+
     // start background workers before GL
     std::thread th_zmq(zmq_thread_func);
+    std::thread th_h(h_zmq_thread_func);
     std::thread th_cam(camera_thread_func);
     std::thread th_proj(projector_thread_func);
 
@@ -763,7 +1005,17 @@ int main(int argc, char** argv){
             const unsigned char* ptr = nullptr; size_t n = 0;
             if (g_cache.get(id, ptr, n) && n == expected_bytes){
                 auto t_before = now_ns();
-                draw_mask_pixels(ptr, WIDTH, HEIGHT);
+                // Apply homography mapping if available
+                static std::vector<unsigned char> warped;
+                bool use_h = g_h_ready.load();
+                if (use_h){
+                    warp_mask_nn(ptr, warped);
+                }
+
+                // Prepare overlay buffers; draw timing depends on use_h
+                int ov_w = 0, ov_h = 0;
+                static std::vector<unsigned char> ov;
+                bool overlay_built = false;
 
                 if (VISIBLE_ID){
                     // top row: running counter starting at 1
@@ -783,21 +1035,74 @@ int main(int argc, char** argv){
                         bottom = "";
                     }
 
-                    int ow=0, oh=0;
-                    static std::vector<unsigned char> ov;
-
                     if (OVERLAY_STYLE == 1){
-                        build_overlay_digits(ctr, bottom, OVERLAY_CELL, ov, ow, oh);
+                        build_overlay_digits(ctr, bottom, OVERLAY_CELL, ov, ov_w, ov_h);
                     } else {
                         uint64_t pidx_full = pending_draw_proj_idx.load();
                         uint8_t id8 = uint8_t(std::max(0, id) & 0xFF);
                         uint8_t p8  = uint8_t(pidx_full & 0xFF);
                         uint8_t hb8 = uint8_t((pidx_full >> 8) & 0xFF);
-                        build_overlay_barcode(id8, p8, hb8, OVERLAY_CELL, ov, ow, oh);
+                        build_overlay_barcode(id8, p8, hb8, OVERLAY_CELL, ov, ov_w, ov_h);
                     }
-                    draw_overlay_pixels(ov.data(), ow, oh, OVERLAY_OFF_X, OVERLAY_OFF_Y);
+
+                    if (use_h){
+                        // Prewarp overlay using same mapping
+                        static std::vector<unsigned char> ov_full;  // source-space full overlay
+                        static std::vector<unsigned char> ov_warped; // dest-space overlay
+                        static std::vector<unsigned char> plate_src; // source-space plate mask
+                        static std::vector<unsigned char> plate_w;   // dest-space plate mask
+
+                        ov_full.assign((size_t)WIDTH * (size_t)HEIGHT, 0);
+                        blit_onto_fullscreen(ov_full, WIDTH, HEIGHT, ov, ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
+
+                        if (OVERLAY_BG){
+                            plate_src.assign((size_t)WIDTH * (size_t)HEIGHT, 0);
+                            // draw solid rect in source space where overlay sits
+                            int x0 = OVERLAY_OFF_X, y0 = OVERLAY_OFF_Y;
+                            for (int y = 0; y < ov_h; ++y){
+                                int dy = y0 + y; if (dy < 0 || dy >= HEIGHT) continue;
+                                int dx0 = x0; int run = ov_w;
+                                if (dx0 < 0){ run += dx0; dx0 = 0; }
+                                if (dx0 + run > WIDTH){ run = WIDTH - dx0; }
+                                if (run <= 0) continue;
+                                unsigned char* dst = plate_src.data() + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
+                                std::memset(dst, 255, (size_t)run);
+                            }
+                            warp_mask_nn(plate_src.data(), plate_w);
+                        } else {
+                            plate_w.clear();
+                        }
+
+                        warp_mask_nn(ov_full.data(), ov_warped);
+
+                        // Apply black plate in dest space
+                        if (!plate_w.empty()){
+                            const size_t N = (size_t)WIDTH * (size_t)HEIGHT;
+                            for (size_t i = 0; i < N; ++i){
+                                if (plate_w[i]) warped[i] = 0;
+                            }
+                        }
+                        // Composite overlay digits on top (max blend)
+                        {
+                            const size_t N = (size_t)WIDTH * (size_t)HEIGHT;
+                            for (size_t i = 0; i < N; ++i){
+                                unsigned char v = ov_warped[i];
+                                if (v > warped[i]) warped[i] = v;
+                            }
+                        }
+                    } else {
+                        overlay_built = true; // defer GL overlay until after base mask draw
+                    }
                 }
 
+                if (use_h){
+                    draw_mask_pixels(warped.data(), WIDTH, HEIGHT);
+                } else {
+                    draw_mask_pixels(ptr, WIDTH, HEIGHT);
+                    if (VISIBLE_ID && overlay_built){
+                        draw_overlay_pixels(ov.data(), ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
+                    }
+                }
                 glfwSwapBuffers(g_win);
                 auto t_after = now_ns();
 
@@ -824,6 +1129,7 @@ int main(int argc, char** argv){
     th_proj.join();
     th_cam.join();
     th_zmq.join();
+    th_h.join();
 
     LOG("Bye.\n");
     return 0;

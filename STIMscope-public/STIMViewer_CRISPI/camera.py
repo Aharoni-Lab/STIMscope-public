@@ -997,6 +997,16 @@ class OptimizedCamera(QObject):
                 H = find_homography()
                 if H is not None:
                     self.translation_matrix = H  # keep raw H
+                    # Send H to projector engine via ZMQ
+                    try:
+                        self._send_h_to_projector(H)
+                    except Exception as esend:
+                        print(f"⚠️ Could not send H to projector: {esend}")
+                    # Also write H to a text file for preloading at projector startup
+                    try:
+                        self._write_h_txt(H)
+                    except Exception as ewrite:
+                        print(f"⚠️ Could not write H txt: {ewrite}")
                     img_path = _assets_path("Generated", "custom_registration_image.png")
                     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
                     if img is not None:
@@ -1033,6 +1043,56 @@ class OptimizedCamera(QObject):
             self._interface.on_projection_received(img, H)
         except Exception:
             pass
+
+    def _send_h_to_projector(self, H):
+        """
+        Send 3x3 homography to projector engine over ZMQ REP endpoint.
+        Protocol: multipart [b"H", 9*float64 bytes row-major].
+        Endpoint: tcp://127.0.0.1:5560 by default.
+        """
+        try:
+            import numpy as np
+            import zmq
+        except Exception as e:
+            raise RuntimeError(f"ZMQ not available: {e}")
+
+        arr = np.asarray(H, dtype=np.float64).reshape(3, 3)
+        payload = arr.tobytes(order='C')
+        ctx = zmq.Context.instance()
+        sock = ctx.socket(zmq.REQ)
+        try:
+            sock.setsockopt(zmq.LINGER, 0)
+            sock.setsockopt(zmq.RCVTIMEO, 1000)
+            sock.setsockopt(zmq.SNDTIMEO, 1000)
+        except Exception:
+            pass
+        endpoint = "tcp://127.0.0.1:5560"
+        try:
+            sock.connect(endpoint)
+            sock.send_multipart([b"H", payload])
+            try:
+                rep = sock.recv()
+                rep_s = rep.decode(errors='ignore') if isinstance(rep, (bytes, bytearray)) else str(rep)
+                if rep_s != "OK":
+                    print(f"⚠️ Projector replied: {rep_s}")
+                else:
+                    print("✅ Sent H to projector")
+            except Exception as er:
+                print(f"⚠️ No ACK from projector: {er}")
+        finally:
+            try:
+                sock.close(0)
+            except Exception:
+                pass
+
+    def _write_h_txt(self, H):
+        import numpy as np, os
+        arr = np.asarray(H, dtype=np.float64).reshape(3, 3)
+        out_path = os.path.join(self.asset_dir, "homography_cam2proj.txt")
+        with open(out_path, "w") as f:
+            vals = arr.reshape(-1)
+            f.write(" ".join(f"{float(v):.17g}" for v in vals))
+        print(f"💾 Wrote H text: {out_path}")
 
 
 

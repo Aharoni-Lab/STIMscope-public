@@ -25,6 +25,7 @@ class Interface(QtWidgets.QMainWindow):
 
     messagebox_pyqtSignal = QtCore.pyqtSignal(str, str)
     image_update_signal = QtCore.pyqtSignal(object)
+    fps_update_signal = QtCore.pyqtSignal(float)
     from camera import Camera
 
     def __init__(self, cam_module: Optional[Camera] = None):
@@ -72,7 +73,7 @@ class Interface(QtWidgets.QMainWindow):
         self._qt_instance.aboutToQuit.connect(self._close)
 
         # No minimum size restriction - allow window to be resized freely
-        self.setWindowTitle("STIMViewer - Modern Interface")
+        self.setWindowTitle("STIMViewer-CRISPI")
         
         # Set window icon if available
         icon_path = self._findprinto()
@@ -114,6 +115,11 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_hardware_acquisition = None
         self._hardware_status = False #False = Display Start, False = End
         self._recording_status = False #False = Display Start, False = End
+        # External process handles (non-blocking)
+        self._proc_i2c = None
+        self._proc_masks = None
+        self._proc_projector = None
+
 
 
 
@@ -165,11 +171,21 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_recording = QtWidgets.QPushButton("Start Recording")
         self._button_start_recording.clicked.connect(self._start_recording)
 
+        # New: External control buttons
+        self._button_start_projector = QtWidgets.QPushButton("Start Projection Engine")
+        self._button_start_projector.clicked.connect(self._toggle_start_projector)
+        self._button_req_hmatrix = QtWidgets.QPushButton("REQ H-Matrix")
+        self._button_req_hmatrix.clicked.connect(self._send_hmatrix_to_projector)
+        self._button_send_triggers = QtWidgets.QPushButton("Start Projector Trigger")
+        self._button_send_triggers.clicked.connect(self._toggle_send_triggers)
+        self._button_send_masks = QtWidgets.QPushButton("Send Masks")
+        self._button_send_masks.clicked.connect(self._toggle_send_masks)
+
 
 
 
         
-        self._button_show_gpu_ui = QtWidgets.QPushButton("Show CRISPI")
+        self._button_show_gpu_ui = QtWidgets.QPushButton("Real-Time Trace")
         self._button_show_gpu_ui.clicked.connect(self.show_gpu_ui)
         self._button_show_gpu_ui.setEnabled(_GPU_AVAILABLE)
         
@@ -235,7 +251,7 @@ class Interface(QtWidgets.QMainWindow):
         self._button_sl_project_reg.clicked.connect(self._sl_project_registration)
 
         # Project intensity controls
-        self._project_intensity_label = QtWidgets.QLabel("<b>Project Intensity:</b>")
+        self._project_intensity_label = QtWidgets.QLabel("Project Intensity")
         self._project_intensity_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
         self._project_intensity_slider.setRange(0, 255)
         self._project_intensity_slider.setValue(255)
@@ -254,13 +270,13 @@ class Interface(QtWidgets.QMainWindow):
         self._button_project_off.clicked.connect(self._project_off)
 
         # Camera type selection
-        self._camera_type_label = QtWidgets.QLabel("<b>Camera Type:</b>")
+        self._camera_type_label = QtWidgets.QLabel("Camera Type")
         self.camera_type_dropdown = QtWidgets.QComboBox()
         self.camera_type_dropdown.addItems(["IDS_Peak", "MIPI", "Generic Camera"])
         self.camera_type_dropdown.setCurrentText(self.selected_camera_type)
         self.camera_type_dropdown.currentTextChanged.connect(self._on_camera_type_changed)
 
-        self._gain_label = QtWidgets.QLabel("<b>Gain:</b>")
+        self._gain_label = QtWidgets.QLabel("AG")
         self._gain_label.setMaximumWidth(70)
 
         self._gain_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical)
@@ -270,7 +286,7 @@ class Interface(QtWidgets.QMainWindow):
 
         
 
-        self._dgain_label = QtWidgets.QLabel("<b>DGain:</b>")
+        self._dgain_label = QtWidgets.QLabel("DG")
         self._dgain_label.setMaximumWidth(70)
 
         self._dgain_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Vertical)
@@ -307,32 +323,43 @@ class Interface(QtWidgets.QMainWindow):
         config_layout.addWidget(self._button_calibrate,                  0, 1)
         config_layout.addWidget(self._button_sl_calibrate,               0, 2)
         config_layout.addWidget(self._button_sl_project_reg,             0, 3)
+        # Row 1: Projection engine and trigger controls
+        row1_layout = QtWidgets.QHBoxLayout()
+        row1_layout.addWidget(self._button_start_projector)
+        row1_layout.addWidget(self._button_req_hmatrix)
+        row1_layout.addStretch()
+        row1_layout.addWidget(self._button_send_triggers)
+        row1_layout.addWidget(self._button_send_masks)
+        row1_widget = QtWidgets.QWidget()
+        row1_widget.setLayout(row1_layout)
+        config_layout.addWidget(row1_widget,                             1, 0, 1, 2)
         
-        # Row 1: Project intensity controls (label, slider, value in one row)
-        project_controls_layout = QtWidgets.QHBoxLayout()
-        project_controls_layout.addWidget(self._project_intensity_label)
-        project_controls_layout.addWidget(self._project_intensity_slider)
-        project_controls_layout.addWidget(self._project_intensity_value_label)
-        project_controls_layout.addStretch()  # Push everything to the left
-        project_controls_widget = QtWidgets.QWidget()
-        project_controls_widget.setLayout(project_controls_layout)
-        config_layout.addWidget(project_controls_widget,                 1, 0, 1, 2)  # Span 2 columns
+        # Row 2 removed: we'll place intensity controls next to Project OFF
         
-        # Row 2: Project ON/OFF buttons
+        # Row 3: Project ON/OFF buttons
         project_buttons_layout = QtWidgets.QHBoxLayout()
         project_buttons_layout.addWidget(self._button_project_on)
         project_buttons_layout.addWidget(self._button_project_off)
+        project_buttons_layout.addSpacing(12)
+        project_buttons_layout.addWidget(self._project_intensity_label)
+        project_buttons_layout.addWidget(self._project_intensity_slider)
+        project_buttons_layout.addWidget(self._project_intensity_value_label)
+        project_buttons_layout.addStretch()
         project_buttons_widget = QtWidgets.QWidget()
         project_buttons_widget.setLayout(project_buttons_layout)
-        config_layout.addWidget(project_buttons_widget,                  2, 0, 1, 2)  # Span 2 columns
+        config_layout.addWidget(project_buttons_widget,                  3, 0, 1, 2)
         
-        # Row 3: Trigger line controls
-        config_layout.addWidget(self._label_trigger_line,                3, 0)
-        config_layout.addWidget(self._dropdown_trigger_line,             3, 1)
+        # Row 4: Trigger line controls
+        config_layout.addWidget(self._label_trigger_line,                4, 0)
+        config_layout.addWidget(self._dropdown_trigger_line,             4, 1)
         
-        # Row 4: Camera type controls
-        config_layout.addWidget(self._camera_type_label,                 4, 0)
-        config_layout.addWidget(self.camera_type_dropdown,               4, 1)    
+        # Row 5: Camera type controls
+        config_layout.addWidget(self._camera_type_label,                 5, 0)
+        config_layout.addWidget(self.camera_type_dropdown,               5, 1)
+        # Row 6: Camera format controls (moved)
+        self._camera_format_label = QtWidgets.QLabel("Camera Format")
+        config_layout.addWidget(self._camera_format_label,               6, 0)
+        config_layout.addWidget(self._dropdown_pixel_format,             6, 1)
 
 
         capture_group = QtWidgets.QGroupBox("")
@@ -356,7 +383,7 @@ class Interface(QtWidgets.QMainWindow):
 
         capture_layout.addWidget(self._button_start_recording, 0, 0)
         capture_layout.addWidget(self._button_software_trigger, 0, 1)
-        capture_layout.addWidget(self._dropdown_pixel_format, 1, 0)
+        # Pixel format moved under Camera Type below
         capture_layout.addWidget(self._button_show_gpu_ui, 1, 1)
 
 
@@ -436,6 +463,9 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_hardware_acquisition.setToolTip("Start/Stop acquiring images using hardware triggering rather than real time(RT) acquisition. Hardware Trigger FPS must stay <45 hz")
         self._button_start_recording.setToolTip("Start/Stop recording video of the live feed.")
         self._button_software_trigger.setToolTip("Save the next processed frame.")
+        self._button_send_triggers.setToolTip("Start/Stop sending projector triggers over I2C.")
+        self._button_send_masks.setToolTip("Start/Stop sending masks over ZMQ to the projector.")
+        self._button_start_projector.setToolTip("Start/Stop the projection engine binary with configured options.")
 
 
         self._gain_label.setToolTip("Adjust the analog gain level (brightness).")
@@ -445,6 +475,289 @@ class Interface(QtWidgets.QMainWindow):
 
         button_bar.setLayout(button_bar_layout)
         self._layout.addWidget(button_bar)
+
+    def _ensure_qprocess(self):
+        # Lazy import to avoid startup penalty if unused
+        from PyQt5.QtCore import QProcess
+        return QProcess
+
+    def _maybe_build_projector(self, proj_dir: str) -> bool:
+        try:
+            import os, subprocess
+            exe = f"{proj_dir}/projector"
+            src = f"{proj_dir}/main.cpp"
+            need_build = (not os.path.exists(exe))
+            if not need_build:
+                try:
+                    need_build = os.path.getmtime(exe) < os.path.getmtime(src)
+                except Exception:
+                    need_build = False
+            if not need_build:
+                return True
+            print(f"[PROJ] Building projector in {proj_dir} ...")
+            cmd = [
+                "g++", "-O2", "-std=c++17", "main.cpp", "-o", "projector",
+                "-lglfw", "-lGL", "-lzmq", "-lgpiod", "-lpthread"
+            ]
+            res = subprocess.run(cmd, cwd=proj_dir, capture_output=True, text=True)
+            if res.returncode != 0:
+                print("[PROJ] Build failed:\n" + (res.stderr or res.stdout))
+                return False
+            print("[PROJ] Build succeeded")
+            return True
+        except Exception as e:
+            print(f"[PROJ] Build error: {e}")
+            return False
+
+    def _helper_python_path_for_masks(self) -> str:
+        # Prefer local venv (contains pyzmq), then active conda, then current python
+        try:
+            venv_py = (Path(__file__).resolve().parents[1] / "my_UARTvenv" / "bin" / "python").resolve()
+            if venv_py.exists():
+                return str(venv_py)
+        except Exception:
+            pass
+        try:
+            conda_pref = os.environ.get("CONDA_PREFIX")
+            if conda_pref:
+                cand = Path(conda_pref) / "bin" / "python"
+                if cand.exists():
+                    return str(cand)
+        except Exception:
+            pass
+        return sys.executable or "/usr/bin/python3"
+
+    def _helper_python_path_for_i2c(self) -> str:
+        """Pick Python for I2C (prefer system where smbus2 is typically available)."""
+        for cand in ("/usr/bin/python3", "/usr/local/bin/python3", sys.executable):
+            try:
+                if os.path.exists(cand):
+                    return cand
+            except Exception:
+                continue
+        return sys.executable
+
+    def _attach_proc_signals(self, proc, which: str):
+        try:
+            from PyQt5.QtCore import QProcess
+            proc.setProcessChannelMode(QProcess.MergedChannels)
+            proc.readyReadStandardOutput.connect(lambda: self._on_proc_output(proc, which))
+        except Exception:
+            pass
+
+    def _on_proc_output(self, proc, which: str):
+        try:
+            data = bytes(proc.readAllStandardOutput()).decode(errors='ignore')
+            if data:
+                if which == 'i2c':
+                    prefix = "[I2C]"
+                elif which == 'masks':
+                    prefix = "[MASK]"
+                else:
+                    prefix = "[PROJ]"
+                print(f"{prefix} {data.rstrip()}")
+        except Exception:
+            pass
+
+    def _toggle_send_triggers(self):
+        QProcess = self._ensure_qprocess()
+        try:
+            # Run exact script and capture output/errors in console
+            work_dir = str(Path(__file__).resolve().parents[1])
+            # Use absolute path explicitly to avoid any ambiguity
+            script_path = "/home/aharonilabjetson2/Desktop/MyScripts/MyUART/i2c_test_send_commands.py"
+            py = "/usr/bin/python3"
+
+            self._proc_i2c = QProcess(self)
+            self._proc_i2c.setWorkingDirectory(work_dir)
+            self._attach_proc_signals(self._proc_i2c, 'i2c')
+            self._proc_i2c.finished.connect(lambda *_: self._on_proc_finished('i2c'))
+            self._proc_i2c.errorOccurred.connect(lambda *_: self._on_proc_finished('i2c'))
+
+            try:
+                from PyQt5.QtCore import QProcessEnvironment
+                env = QProcessEnvironment.systemEnvironment()
+                env.insert("PYTHONUNBUFFERED", "1")
+                # Keep a clean PATH so /usr/bin/python3 resolves stable libs
+                if not env.contains("PATH"):
+                    env.insert("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+                self._proc_i2c.setProcessEnvironment(env)
+            except Exception:
+                pass
+
+            print(f"[I2C] Launch: {py} {script_path}")
+            self._proc_i2c.start(py, [script_path])
+        except Exception as e:
+            print(f"Failed to start I2C trigger script: {e}")
+            self._on_proc_finished('i2c')
+
+    def _toggle_start_projector(self):
+        QProcess = self._ensure_qprocess()
+        try:
+            if self._proc_projector is None:
+                self._proc_projector = QProcess(self)
+                self._proc_projector.finished.connect(lambda *_: self._on_proc_finished('projector'))
+                self._proc_projector.errorOccurred.connect(lambda *_: self._on_proc_finished('projector'))
+                self._attach_proc_signals(self._proc_projector, 'projector')
+                try:
+                    from PyQt5.QtCore import QProcessEnvironment
+                    env = QProcessEnvironment.systemEnvironment()
+                    env.insert("PYTHONUNBUFFERED", "1")
+                    self._proc_projector.setProcessEnvironment(env)
+                except Exception:
+                    pass
+
+                # Launch projector from exact local folder with your args
+                proj_dir = "/home/aharonilabjetson2/Desktop/MyScripts/MyUART/ZMQ_sender_mask"
+                # Ensure latest binary is built before launch
+                if not self._maybe_build_projector(proj_dir):
+                    print("Failed to build projector; aborting launch")
+                    self._on_proc_finished('projector')
+                    return
+                self._proc_projector.setWorkingDirectory(proj_dir)
+                exe = f"{proj_dir}/projector"
+                args = [
+                    "--bind=tcp://*:5558",
+                    "--swap-interval=1",
+                    "--visible-id=1",
+                    "--overlay-style=digits",
+                    # Use projector defaults for size/position (compile-time or runtime)
+                    "--overlay-bg=1",
+                    "--overlay-bottom=mask",
+                    "--overlay-top=proj",
+                    "--cam-chip=/dev/gpiochip1",
+                    "--cam-line=8",
+                    "--cam-edge=rising",
+                    "--proj-chip=/dev/gpiochip1",
+                    "--proj-line=9",
+                    "--proj-edge=rising",
+                    "--horiz-flip=1"
+                ]
+                print(f"[PROJ] Launch: {exe} {' '.join(args)}")
+                self._button_start_projector.setText("Stop Projection Engine")
+                self._proc_projector.start(exe, args)
+            else:
+                self._proc_projector.kill()
+        except Exception as e:
+            print(f"Failed to toggle projector: {e}")
+            self._on_proc_finished('projector')
+
+    def _toggle_send_masks(self):
+        QProcess = self._ensure_qprocess()
+        try:
+            if self._proc_masks is None:
+                self._proc_masks = QProcess(self)
+                self._proc_masks.finished.connect(lambda *_: self._on_proc_finished('masks'))
+                self._proc_masks.errorOccurred.connect(lambda *_: self._on_proc_finished('masks'))
+                self._attach_proc_signals(self._proc_masks, 'masks')
+                self._button_send_masks.setText("Stop Sending Masks")
+
+                work_dir = str(Path(__file__).resolve().parents[1])
+                self._proc_masks.setWorkingDirectory(work_dir)
+                py = self._helper_python_path_for_masks()
+                script_path = "/home/aharonilabjetson2/Desktop/MyScripts/MyUART/ZMQ_sender_mask/zmq_mask_sender.py"
+
+                try:
+                    from PyQt5.QtCore import QProcessEnvironment
+                    env = QProcessEnvironment.systemEnvironment()
+                    env.insert("PYTHONUNBUFFERED", "1")
+                    self._proc_masks.setProcessEnvironment(env)
+                except Exception:
+                    pass
+
+                print(f"[MASK] Launch: {py} {script_path}")
+                self._proc_masks.start(py, [script_path])
+            else:
+                self._proc_masks.kill()
+        except Exception as e:
+            print(f"Failed to toggle masks: {e}")
+            self._on_proc_finished('masks')
+
+    def _on_proc_finished(self, which: str):
+        if which == 'i2c':
+            try:
+                if self._proc_i2c is not None:
+                    self._proc_i2c.deleteLater()
+            except Exception:
+                pass
+            self._proc_i2c = None
+            if hasattr(self, '_button_send_triggers') and self._button_send_triggers is not None:
+                self._button_send_triggers.setText("Send Projection Triggers")
+        else:
+            if which == 'masks':
+                try:
+                    if self._proc_masks is not None:
+                        self._proc_masks.deleteLater()
+                except Exception:
+                    pass
+                self._proc_masks = None
+                if hasattr(self, '_button_send_masks') and self._button_send_masks is not None:
+                    self._button_send_masks.setText("Send Masks")
+            elif which == 'projector':
+                try:
+                    if self._proc_projector is not None:
+                        self._proc_projector.deleteLater()
+                except Exception:
+                    pass
+                self._proc_projector = None
+                if hasattr(self, '_button_start_projector') and self._button_start_projector is not None:
+                    self._button_start_projector.setText("Start Projection Engine")
+
+    def _terminate_external_processes(self):
+        # Ensure spawned helper scripts are stopped when GUI closes
+        try:
+            if self._proc_i2c is not None:
+                try:
+                    self._proc_i2c.kill()
+                except Exception:
+                    pass
+                try:
+                    self._proc_i2c.waitForFinished(1000)
+                except Exception:
+                    pass
+        finally:
+            self._proc_i2c = None
+            try:
+                if hasattr(self, '_button_send_triggers') and self._button_send_triggers is not None:
+                    self._button_send_triggers.setText("Send Projection Triggers")
+            except Exception:
+                pass
+
+        try:
+            if self._proc_masks is not None:
+                try:
+                    self._proc_masks.kill()
+                except Exception:
+                    pass
+                try:
+                    self._proc_masks.waitForFinished(1000)
+                except Exception:
+                    pass
+        finally:
+            self._proc_masks = None
+            try:
+                if hasattr(self, '_button_send_masks') and self._button_send_masks is not None:
+                    self._button_send_masks.setText("Send Masks")
+            except Exception:
+                pass
+
+        try:
+            if self._proc_projector is not None:
+                try:
+                    self._proc_projector.kill()
+                except Exception:
+                    pass
+                try:
+                    self._proc_projector.waitForFinished(2000)
+                except Exception:
+                    pass
+        finally:
+            self._proc_projector = None
+            try:
+                if hasattr(self, '_button_start_projector') and self._button_start_projector is not None:
+                    self._button_start_projector.setText("Start Projection Engine")
+            except Exception:
+                pass
 
     def _create_statusbar(self):
        
@@ -485,6 +798,10 @@ class Interface(QtWidgets.QMainWindow):
         self.GUIfps_label.setStyleSheet("font-size: 11px; color: #1c1c1e;")
         self.GUIfps_label.setAlignment(Qt.AlignRight)
         self.GUIfps_label.setToolTip("Calculated FPS over a rolling average of 2 seconds. If set to hardware trigger mode, camera only supports <45 fps.")
+        try:
+            self.fps_update_signal.connect(self._set_gui_fps, QtCore.Qt.QueuedConnection)
+        except Exception:
+            pass
 
         status_bar_layout.addWidget(self.acq_label)
         status_bar_layout.addWidget(self.projector_status_label)
@@ -494,8 +811,20 @@ class Interface(QtWidgets.QMainWindow):
         status_bar.setLayout(status_bar_layout)
         self._layout.addWidget(status_bar)
 
+    @QtCore.pyqtSlot(float)
+    def _set_gui_fps(self, fps: float):
+        try:
+            self.GUIfps_label.setText(f"GUI FPS: {fps:.2f}")
+        except Exception:
+            pass
+
     def _close(self):
         try:
+            # Stop helper processes first
+            try:
+                self._terminate_external_processes()
+            except Exception:
+                pass
             self._camera.shutdown()
         except Exception:
             pass
@@ -521,6 +850,10 @@ class Interface(QtWidgets.QMainWindow):
             if self.projection is not None:
                 try: self.projection.close()
                 except Exception: pass
+            try:
+                self._terminate_external_processes()
+            except Exception:
+                pass
         finally:
             event.accept()
 
@@ -581,12 +914,12 @@ class Interface(QtWidgets.QMainWindow):
         self._create_statusbar()
 
         try:
-            self.image_update_signal.connect(self.display.on_image_received)
+            self.image_update_signal.connect(self.display.on_image_received, QtCore.Qt.QueuedConnection)
             print("Bound image_update_signal → Display.on_image_received")
         except Exception as e1:
             print(f"Primary connect failed ({e1}); falling back to setImage alias")
             try:
-                self.image_update_signal.connect(self.display.setImage)
+                self.image_update_signal.connect(self.display.setImage, QtCore.Qt.QueuedConnection)
                 print("Bound image_update_signal → Display.setImage")
             except Exception as e2:
                 print(f"Display signal hookup failed: {e2}")
@@ -1178,8 +1511,8 @@ class Interface(QtWidgets.QMainWindow):
 
 
             try:
-                GUIfps = self._camera.get_actual_fps()
-                self.GUIfps_label.setText(f"GUI FPS: {GUIfps:.2f}")
+                GUIfps = float(self._camera.get_actual_fps())
+                self.fps_update_signal.emit(GUIfps)
             except Exception:
                 pass
 
@@ -1276,3 +1609,20 @@ class Interface(QtWidgets.QMainWindow):
 
 
     # Zoom slider methods removed - using mouse wheel zoom instead
+
+    def _send_hmatrix_to_projector(self):
+        try:
+            import numpy as np
+            # Prefer in-memory H from last calibration
+            H = getattr(self._camera, 'translation_matrix', None)
+            if H is None or not hasattr(H, 'shape'):
+                # Fallback to npy on disk
+                npy_path = (ASSETS / 'Generated' / 'homography_cam2proj.npy').resolve()
+                if npy_path.exists():
+                    H = np.load(str(npy_path))
+            if H is None:
+                print("No H-matrix available. Calibrate first.")
+                return
+            self._camera._send_h_to_projector(H)
+        except Exception as e:
+            print(f"REQ H-Matrix failed: {e}")
