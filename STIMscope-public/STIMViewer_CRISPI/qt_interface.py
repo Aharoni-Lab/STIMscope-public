@@ -156,9 +156,30 @@ class Interface(QtWidgets.QMainWindow):
     def set_camera(self, cam_module):
         self._camera = cam_module
     
+    def _set_compact_width_to_text(self, widget, extra_px: int = 24):
+        try:
+            fm = widget.fontMetrics()
+            text = widget.currentText() if hasattr(widget, 'currentText') else widget.text()
+            width = fm.horizontalAdvance(text) + extra_px
+            if width > 0:
+                widget.setFixedWidth(width)
+        except Exception:
+            pass
+    
 
     def _create_button_bar(self):
        
+        # Helper to force a widget width to match its current text
+        def _set_compact_width_to_text(widget, extra_px: int = 24):
+            try:
+                fm = widget.fontMetrics()
+                text = widget.currentText() if hasattr(widget, 'currentText') else widget.text()
+                width = fm.horizontalAdvance(text) + extra_px
+                if width > 0:
+                    widget.setFixedWidth(width)
+            except Exception:
+                pass
+
 
         button_bar = QtWidgets.QWidget(self.centralWidget())
         button_bar_layout = QtWidgets.QGridLayout()
@@ -166,6 +187,11 @@ class Interface(QtWidgets.QMainWindow):
 
         self._button_start_hardware_acquisition = QtWidgets.QPushButton("Start Hardware Acquisition")
         self._button_start_hardware_acquisition.clicked.connect(self._start_hardware_acquisition)
+        try:
+            self._button_start_hardware_acquisition.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            self._set_compact_width_to_text(self._button_start_hardware_acquisition)
+        except Exception:
+            pass
 
 
         self._button_start_recording = QtWidgets.QPushButton("Start Recording")
@@ -176,6 +202,17 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_projector.clicked.connect(self._toggle_start_projector)
         self._button_req_hmatrix = QtWidgets.QPushButton("REQ H-Matrix")
         self._button_req_hmatrix.clicked.connect(self._send_hmatrix_to_projector)
+        # Mask pattern selection UI
+        self._mask_pattern_label = QtWidgets.QLabel("Mask Pattern")
+        self._mask_pattern_dropdown = QtWidgets.QComboBox()
+        self._mask_pattern_dropdown.addItems([
+            "Moving Bar", "Checkerboard", "Solid", "Circle", "Image", "Folder", "Custom Python"
+        ])
+        self._mask_pattern_dropdown.currentTextChanged.connect(self._on_mask_pattern_changed)
+        self._mask_pattern_browse = QtWidgets.QPushButton("Browse…")
+        self._mask_pattern_browse.clicked.connect(self._browse_mask_pattern_path)
+        self._mask_pattern_browse.setEnabled(False)
+        self._mask_pattern_path = ""
         self._button_send_triggers = QtWidgets.QPushButton("Start Projector Trigger")
         self._button_send_triggers.clicked.connect(self._toggle_send_triggers)
         self._button_send_masks = QtWidgets.QPushButton("Send Masks")
@@ -204,6 +241,14 @@ class Interface(QtWidgets.QMainWindow):
 
 
         self._dropdown_trigger_line.currentIndexChanged.connect(self.change_hardware_trigger_line)
+        # Make combo compact to fit content
+        try:
+            self._dropdown_trigger_line.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+            self._dropdown_trigger_line.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            self._dropdown_trigger_line.currentTextChanged.connect(lambda *_: _set_compact_width_to_text(self._dropdown_trigger_line, 36))
+            _set_compact_width_to_text(self._dropdown_trigger_line, 36)
+        except Exception:
+            pass
 
 
         self._dropdown_pixel_format = QtWidgets.QComboBox()
@@ -227,6 +272,14 @@ class Interface(QtWidgets.QMainWindow):
 
                 continue
         self._dropdown_pixel_format.currentIndexChanged.connect(self.change_pixel_format)
+        # Make combo compact to fit content
+        try:
+            self._dropdown_pixel_format.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+            self._dropdown_pixel_format.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            self._dropdown_pixel_format.currentTextChanged.connect(lambda *_: _set_compact_width_to_text(self._dropdown_pixel_format, 36))
+            _set_compact_width_to_text(self._dropdown_pixel_format, 36)
+        except Exception:
+            pass
 
 
         self._dropdown_pixel_format.setEnabled(True)
@@ -238,17 +291,39 @@ class Interface(QtWidgets.QMainWindow):
 
         self._button_software_trigger = QtWidgets.QPushButton("Snapshot")
         self._button_software_trigger.clicked.connect(self._trigger_sw_trigger)
+        # Keep buttons compact
+        try:
+            self._button_software_trigger.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_software_trigger)
+        except Exception:
+            pass
         
         
 
         self._button_calibrate = QtWidgets.QPushButton("Calibrate")
         self._button_calibrate.clicked.connect(self._calibrate)
+        try:
+            self._button_calibrate.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            # a bit larger than text
+            _set_compact_width_to_text(self._button_calibrate, 28)
+        except Exception:
+            pass
 
         # Structured-Light calibration & projection buttons
         self._button_sl_calibrate = QtWidgets.QPushButton("Structured-Light Calibrate")
         self._button_sl_calibrate.clicked.connect(self._sl_calibrate)
+        try:
+            self._button_sl_calibrate.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_sl_calibrate, 28)
+        except Exception:
+            pass
         self._button_sl_project_reg = QtWidgets.QPushButton("Project LUT-Warped Registration")
         self._button_sl_project_reg.clicked.connect(self._sl_project_registration)
+        try:
+            self._button_sl_project_reg.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_sl_project_reg, 28)
+        except Exception:
+            pass
 
         # Project intensity controls
         self._project_intensity_label = QtWidgets.QLabel("Project Intensity")
@@ -275,6 +350,14 @@ class Interface(QtWidgets.QMainWindow):
         self.camera_type_dropdown.addItems(["IDS_Peak", "MIPI", "Generic Camera"])
         self.camera_type_dropdown.setCurrentText(self.selected_camera_type)
         self.camera_type_dropdown.currentTextChanged.connect(self._on_camera_type_changed)
+        # Make combo compact to fit content
+        try:
+            self.camera_type_dropdown.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+            self.camera_type_dropdown.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            self.camera_type_dropdown.currentTextChanged.connect(lambda *_: _set_compact_width_to_text(self.camera_type_dropdown, 36))
+            _set_compact_width_to_text(self.camera_type_dropdown, 36)
+        except Exception:
+            pass
 
         self._gain_label = QtWidgets.QLabel("AG")
         self._gain_label.setMaximumWidth(70)
@@ -302,6 +385,10 @@ class Interface(QtWidgets.QMainWindow):
         config_group = QtWidgets.QGroupBox("")
         config_layout = QtWidgets.QGridLayout()
         config_layout.setSpacing(3)  # Reduce spacing
+        try:
+            config_layout.setHorizontalSpacing(2)  # Tighter space between top-row buttons
+        except Exception:
+            pass
         config_layout.setContentsMargins(6, 6, 6, 6)  # Reduce margins
         config_group.setLayout(config_layout)
         config_group.setStyleSheet("""
@@ -318,16 +405,26 @@ class Interface(QtWidgets.QMainWindow):
         """)
 
 
-        # Row 0: Main action buttons
-        config_layout.addWidget(self._button_start_hardware_acquisition, 0, 0)
-        config_layout.addWidget(self._button_calibrate,                  0, 1)
-        config_layout.addWidget(self._button_sl_calibrate,               0, 2)
-        config_layout.addWidget(self._button_sl_project_reg,             0, 3)
+        # Row 0: Main action buttons (tightly packed, left-aligned)
+        row0_layout = QtWidgets.QHBoxLayout()
+        row0_layout.setContentsMargins(0, 0, 0, 0)
+        row0_layout.setSpacing(4)
+        row0_layout.addWidget(self._button_start_hardware_acquisition)
+        row0_layout.addWidget(self._button_calibrate)
+        row0_layout.addWidget(self._button_sl_calibrate)
+        row0_layout.addWidget(self._button_sl_project_reg)
+        row0_widget = QtWidgets.QWidget()
+        row0_widget.setLayout(row0_layout)
+        config_layout.addWidget(row0_widget,                             0, 0, 1, 2)
         # Row 1: Projection engine and trigger controls
         row1_layout = QtWidgets.QHBoxLayout()
         row1_layout.addWidget(self._button_start_projector)
         row1_layout.addWidget(self._button_req_hmatrix)
-        row1_layout.addStretch()
+        row1_layout.addWidget(self._mask_pattern_label)
+        row1_layout.addWidget(self._mask_pattern_dropdown)
+        row1_layout.addWidget(self._mask_pattern_browse)
+        # Shift buttons left: replace stretch with a small spacing
+        row1_layout.addSpacing(8)
         row1_layout.addWidget(self._button_send_triggers)
         row1_layout.addWidget(self._button_send_masks)
         row1_widget = QtWidgets.QWidget()
@@ -349,17 +446,36 @@ class Interface(QtWidgets.QMainWindow):
         project_buttons_widget.setLayout(project_buttons_layout)
         config_layout.addWidget(project_buttons_widget,                  3, 0, 1, 2)
         
-        # Row 4: Trigger line controls
-        config_layout.addWidget(self._label_trigger_line,                4, 0)
-        config_layout.addWidget(self._dropdown_trigger_line,             4, 1)
-        
-        # Row 5: Camera type controls
-        config_layout.addWidget(self._camera_type_label,                 5, 0)
-        config_layout.addWidget(self.camera_type_dropdown,               5, 1)
-        # Row 6: Camera format controls (moved)
+        # Row 4: Trigger line controls (label followed immediately by dropdown)
+        row_trig_layout = QtWidgets.QHBoxLayout()
+        row_trig_layout.setContentsMargins(0, 0, 0, 0)
+        row_trig_layout.setSpacing(6)
+        row_trig_layout.addWidget(self._label_trigger_line)
+        row_trig_layout.addWidget(self._dropdown_trigger_line)
+        row_trig_widget = QtWidgets.QWidget()
+        row_trig_widget.setLayout(row_trig_layout)
+        config_layout.addWidget(row_trig_widget,                         4, 0, 1, 1, Qt.AlignLeft)
+
+        # Row 5: Camera type controls (label followed immediately by dropdown)
+        row_camtype_layout = QtWidgets.QHBoxLayout()
+        row_camtype_layout.setContentsMargins(0, 0, 0, 0)
+        row_camtype_layout.setSpacing(6)
+        row_camtype_layout.addWidget(self._camera_type_label)
+        row_camtype_layout.addWidget(self.camera_type_dropdown)
+        row_camtype_widget = QtWidgets.QWidget()
+        row_camtype_widget.setLayout(row_camtype_layout)
+        config_layout.addWidget(row_camtype_widget,                      5, 0, 1, 1, Qt.AlignLeft)
+
+        # Row 6: Camera format controls (label followed immediately by dropdown)
         self._camera_format_label = QtWidgets.QLabel("Camera Format")
-        config_layout.addWidget(self._camera_format_label,               6, 0)
-        config_layout.addWidget(self._dropdown_pixel_format,             6, 1)
+        row_camfmt_layout = QtWidgets.QHBoxLayout()
+        row_camfmt_layout.setContentsMargins(0, 0, 0, 0)
+        row_camfmt_layout.setSpacing(6)
+        row_camfmt_layout.addWidget(self._camera_format_label)
+        row_camfmt_layout.addWidget(self._dropdown_pixel_format)
+        row_camfmt_widget = QtWidgets.QWidget()
+        row_camfmt_widget.setLayout(row_camfmt_layout)
+        config_layout.addWidget(row_camfmt_widget,                       6, 0, 1, 1, Qt.AlignLeft)
 
 
         capture_group = QtWidgets.QGroupBox("")
@@ -383,8 +499,15 @@ class Interface(QtWidgets.QMainWindow):
 
         capture_layout.addWidget(self._button_start_recording, 0, 0)
         capture_layout.addWidget(self._button_software_trigger, 0, 1)
+        # Keep Start Recording compact and responsive to text changes
+        try:
+            self._button_start_recording.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_start_recording)
+        except Exception:
+            pass
         # Pixel format moved under Camera Type below
-        capture_layout.addWidget(self._button_show_gpu_ui, 1, 1)
+        # Place Real-Time Trace on the same row
+        capture_layout.addWidget(self._button_show_gpu_ui, 0, 2)
 
 
         control_group = QtWidgets.QGroupBox("")
@@ -527,6 +650,35 @@ class Interface(QtWidgets.QMainWindow):
             pass
         return sys.executable or "/usr/bin/python3"
 
+    def _on_mask_pattern_changed(self, text: str):
+        # Enable browse button only for patterns that need a path
+        need_path = text in ("Image", "Folder", "Custom Python")
+        try:
+            self._mask_pattern_browse.setEnabled(need_path)
+        except Exception:
+            pass
+
+    def _browse_mask_pattern_path(self):
+        try:
+            from PyQt5.QtWidgets import QFileDialog
+            typ = self._mask_pattern_dropdown.currentText()
+            if typ == "Image":
+                fp, _ = QFileDialog.getOpenFileName(self, "Select Image", str(Path.home()),
+                                                    "Images (*.png *.jpg *.jpeg *.bmp)")
+                if fp:
+                    self._mask_pattern_path = fp
+            elif typ == "Folder":
+                dirp = QFileDialog.getExistingDirectory(self, "Select Folder", str(Path.home()))
+                if dirp:
+                    self._mask_pattern_path = dirp
+            elif typ == "Custom Python":
+                fp, _ = QFileDialog.getOpenFileName(self, "Select Python Script", str(Path.home()),
+                                                    "Python (*.py)")
+                if fp:
+                    self._mask_pattern_path = fp
+        except Exception as e:
+            print(f"Browse failed: {e}")
+
     def _helper_python_path_for_i2c(self) -> str:
         """Pick Python for I2C (prefer system where smbus2 is typically available)."""
         for cand in ("/usr/bin/python3", "/usr/local/bin/python3", sys.executable):
@@ -655,7 +807,25 @@ class Interface(QtWidgets.QMainWindow):
                 work_dir = str(Path(__file__).resolve().parents[1])
                 self._proc_masks.setWorkingDirectory(work_dir)
                 py = self._helper_python_path_for_masks()
+                # Resolve sender script according to dropdown
                 script_path = "/home/aharonilabjetson2/Desktop/MyScripts/MyUART/ZMQ_sender_mask/zmq_mask_sender.py"
+                args = []
+                pat = self._mask_pattern_dropdown.currentText()
+                if pat == "Moving Bar":
+                    args = []  # defaults
+                elif pat == "Checkerboard":
+                    args = ["--pattern", "checkerboard"]
+                elif pat == "Solid":
+                    args = ["--pattern", "solid"]
+                elif pat == "Circle":
+                    args = ["--pattern", "circle"]
+                elif pat == "Image":
+                    args = ["--pattern", "image", "--image", self._mask_pattern_path]
+                elif pat == "Folder":
+                    args = ["--pattern", "folder", "--folder", self._mask_pattern_path]
+                elif pat == "Custom Python":
+                    script_path = self._mask_pattern_path or script_path
+                    args = []
 
                 try:
                     from PyQt5.QtCore import QProcessEnvironment
@@ -665,8 +835,9 @@ class Interface(QtWidgets.QMainWindow):
                 except Exception:
                     pass
 
-                print(f"[MASK] Launch: {py} {script_path}")
-                self._proc_masks.start(py, [script_path])
+                cmd = [script_path] + args
+                print(f"[MASK] Launch: {py} {' '.join(cmd)}")
+                self._proc_masks.start(py, cmd)
             else:
                 self._proc_masks.kill()
         except Exception as e:
