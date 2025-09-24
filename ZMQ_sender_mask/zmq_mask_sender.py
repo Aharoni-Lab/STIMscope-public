@@ -54,6 +54,25 @@ def build_patterns(args):
         img[mask] = args.value
         return img
 
+    def gradient_sequence():
+        # Steps from black to white with optional gamma and hold per step
+        n = max(2, int(getattr(args, 'gradient_steps', 6)))
+        g = float(getattr(args, 'gradient_gamma', 1.0))
+        hold = max(1, int(getattr(args, 'gradient_hold', 10)))
+        vals = []
+        for i in range(n):
+            x = i / float(n - 1)
+            if g != 1.0:
+                x = x ** g
+            v = int(round(x * 255.0))
+            vals.append(v)
+        seq = []
+        for v in vals:
+            frame = blank(v)
+            for _ in range(hold):
+                seq.append(frame.copy())
+        return seq
+
     seq = []
     if args.pattern == "folder":
         files = sorted(glob.glob(os.path.join(args.folder, "*.png")) +
@@ -85,15 +104,17 @@ def build_patterns(args):
         return solid, None
     elif args.pattern == "circle":
         return circle, None
+    elif args.pattern == "gradient":
+        return None, gradient_sequence()
     else:
         return moving_bar, None
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--endpoint", default="tcp://127.0.0.1:5558")
-    ap.add_argument("--fps", type=float, default=25.0)
+    ap.add_argument("--fps", type=float, default=60.0)
     ap.add_argument("--pattern", default="moving_bar",
-                    choices=["moving_bar", "checkerboard", "solid", "circle", "image", "folder"]) 
+                    choices=["moving_bar", "checkerboard", "solid", "circle", "gradient", "image", "folder"]) 
     ap.add_argument("--speed", type=float, default=400.0)
     ap.add_argument("--bar-width", dest="bar_width", type=int, default=40)
     ap.add_argument("--value", type=int, default=255)
@@ -101,6 +122,9 @@ def main():
     ap.add_argument("--radius", type=int, default=200)
     ap.add_argument("--image", type=str, default="")
     ap.add_argument("--folder", type=str, default="")
+    ap.add_argument("--gradient-steps", dest="gradient_steps", type=int, default=6)
+    ap.add_argument("--gradient-hold", dest="gradient_hold", type=int, default=20)
+    ap.add_argument("--gradient-gamma", dest="gradient_gamma", type=float, default=2.2)
     args = ap.parse_args()
 
     global W, H

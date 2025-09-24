@@ -1,4 +1,4 @@
-cupy_cuda12x==13.5.1
+cupy_cuda11x==13.5.1
 ids_peak==1.11.0.0.5
 ids_peak_ipl==1.16.0.0.4
 magicgui==0.10.1

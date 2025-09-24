@@ -531,6 +531,38 @@ static int parse_id_from_json(const std::string& s, int fallback){
     try { return std::stoi(s.c_str() + p); } catch(...) { return fallback; }
 }
 
+static bool parse_flag_from_json(const std::string& s, const char* key){
+    size_t p = s.find(key);
+    if (p == std::string::npos) return false;
+    p = s.find_first_of("0123456789tT", p);
+    if (p == std::string::npos) return false;
+    if (s[p] == '1') return true;
+    if ((p+3) < s.size()){
+        char c0 = s[p], c1 = s[p+1], c2 = s[p+2], c3 = s[p+3];
+        if ((c0=='t'||c0=='T') && (c1=='r'||c1=='R') && (c2=='u'||c2=='U') && (c3=='e'||c3=='E')) return true;
+    }
+    return false;
+}
+
+static int parse_opt_bool_from_json(const std::string& s, const char* key){
+    size_t p = s.find(key);
+    if (p == std::string::npos) return -1; // not present
+    p = s.find_first_of("0123456789tTfF", p);
+    if (p == std::string::npos) return -1;
+    if (s[p] == '1') return 1;
+    if (s[p] == '0') return 0;
+    auto lower = [](char c){ return (char)((c>='A'&&c<='Z')? (c-'A'+'a') : c); };
+    if ((p+3) < s.size()){
+        char c0 = lower(s[p]), c1 = lower(s[p+1]), c2 = lower(s[p+2]), c3 = lower(s[p+3]);
+        if (c0=='t' && c1=='r' && c2=='u' && c3=='e') return 1;
+    }
+    if ((p+4) < s.size()){
+        char c0 = lower(s[p]), c1 = lower(s[p+1]), c2 = lower(s[p+2]), c3 = lower(s[p+3]), c4 = lower(s[p+4]);
+        if (c0=='f' && c1=='a' && c2=='l' && c3=='s' && c4=='e') return 0;
+    }
+    return -1;
+}
+
 // ---------- CLI helpers ----------
 static inline std::string trim(const std::string& s){
     size_t b = s.find_first_not_of(" \t\r\n");
@@ -607,7 +639,7 @@ static void zmq_thread_func(){
 
         std::string meta(static_cast<const char*>(part1.data()), part1.size());
         int id_prev = latest_mask_id.load();
-        int id = parse_id_from_json(meta, id_prev < 0 ? 0 : id_prev);
+        int id = parse_id_from_json(meta, id_prev < 0 ? 1 : id_prev + 1);
 
         if (part2.size() != expected){
             LOG("[ZMQ ] bad mask size ", part2.size(), ", expected ", expected, "\n");
@@ -617,7 +649,21 @@ static void zmq_thread_func(){
         g_cache.put(id, static_cast<const unsigned char*>(part2.data()), part2.size());
         latest_mask_id.store(id);
 
-        LOG("[ZMQ ] received id=", id, ", cached ", part2.size(), " bytes\n");
+        // If client requests immediate scheduling (pattern mode), enqueue for next projector frame
+        bool immediate = parse_flag_from_json(meta, "immediate");
+        if (immediate){
+            // Clear stale queued ids to reduce latency/jitter for burst pattern streams
+            {
+                while (g_ready_q.size() > 4){ int drop = -1; g_ready_q.try_pop(drop); }
+            }
+            g_ready_q.push(id);
+        }
+
+        // Optional runtime overlay toggle
+        int vis = parse_opt_bool_from_json(meta, "visible_id");
+        if (vis >= 0){ VISIBLE_ID = (vis != 0); }
+
+        LOG("[ZMQ ] received id=", id, immediate?" (immediate)": "", ", cached ", part2.size(), " bytes\n");
     }
 
     sock.close();
@@ -775,6 +821,13 @@ static void projector_thread_func(){
 
     int last_vis = -1;
 
+    // Status publisher (PUB) for visible id per projector trigger
+    zmq::context_t pub_ctx(1);
+    zmq::socket_t  pub_sock(pub_ctx, ZMQ_PUB);
+    int linger   = 0;   pub_sock.setsockopt(ZMQ_LINGER,   &linger,   sizeof(linger));
+    try { pub_sock.bind("tcp://*:5562"); }
+    catch (const zmq::error_t& e){ LOG("[PROJ] PUB bind failed tcp://*:5562 ", e.what(), "\n"); }
+
     while (g_running.load()){
         timespec to{0, 500*1000*1000};
         int rv = gpiod_line_event_wait(line, &to);
@@ -799,6 +852,15 @@ static void projector_thread_func(){
         last_vis = vis_id;
         last_visible_mask_id.store(vis_id);
         last_visible_proj_idx.store(pidx);
+
+        // Publish status for GUI pacing (best-effort)
+        try {
+            std::ostringstream oss; oss << "{\"pidx\":" << pidx << ",\"vis_id\":" << vis_id << "}";
+            auto s = oss.str();
+            zmq::message_t m(s.size());
+            std::memcpy(m.data(), s.data(), s.size());
+            pub_sock.send(m, zmq::send_flags::dontwait);
+        } catch(...) {}
 
         {
             std::lock_guard<std::mutex> lk(proj_hist_mtx);

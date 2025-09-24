@@ -31,10 +31,28 @@ except Exception:
 try:
     import cupy as cp
     CUDA_AVAILABLE = True
-    print("✅ CUDA/CuPy available for live_trace_extractor")
 except Exception:
     CUDA_AVAILABLE = False
     cp = None
+
+# Determine if CUDA runtime is actually usable (driver/runtime compatible)
+CUDA_USABLE = False
+if CUDA_AVAILABLE:
+    try:
+        # Avoid memory pool calls; just query device count to validate runtime
+        import cupy.cuda.runtime as _cur
+        ndev = _cur.getDeviceCount()
+        if ndev and ndev > 0:
+            # Optional light op to catch driver/runtime mismatches without heavy alloc
+            _ = cp.arange(1, dtype=cp.int8)
+            CUDA_USABLE = True
+            print("✅ CUDA runtime usable for live_trace_extractor")
+        else:
+            print("ℹ️ No CUDA devices found; CPU path will be used")
+    except Exception as e:
+        CUDA_USABLE = False
+        print(f"⚠️ CUDA import succeeded but runtime is unusable; CPU path will be used: {e}")
+else:
     print("ℹ️ CUDA not available for live_trace_extractor; CPU path will be used")
 
 MAX_FRAME_QUEUE_SIZE = 8
@@ -622,7 +640,7 @@ class LiveTraceExtractor(QObject):
         perf_thread.start()
         self._monitor_threads.append(perf_thread)
 
-        if CUDA_AVAILABLE:
+        if CUDA_USABLE:
             def gpu_loop():
                 thread_name = threading.current_thread().name
                 print(f"🔄 GPU monitor thread started: {thread_name}")
@@ -727,7 +745,7 @@ class LiveTraceExtractor(QObject):
 
 
     def _monitor_gpu_memory(self):
-        if not CUDA_AVAILABLE:
+        if not CUDA_USABLE:
             return
         mempool = cp.get_default_memory_pool()
         used = mempool.used_bytes()
@@ -741,7 +759,7 @@ class LiveTraceExtractor(QObject):
             self._cleanup_gpu_memory()
 
     def _cleanup_gpu_memory(self):
-        if not CUDA_AVAILABLE:
+        if not CUDA_USABLE:
             return
         with self._gpu_lock:
             try:
@@ -804,7 +822,7 @@ class LiveTraceExtractor(QObject):
             flat = gray.ravel().astype(np.float32, copy=False)
 
 
-            if CUDA_AVAILABLE and hasattr(self, '_labels_gpu') and self._labels_gpu is not None:
+            if CUDA_USABLE and hasattr(self, '_labels_gpu') and self._labels_gpu is not None:
 
                 if not hasattr(self, '_roi_sizes_gpu') or self._roi_sizes_gpu is None:
                     print("⚠️ GPU ROI sizes not initialized, falling back to CPU")
@@ -2162,8 +2180,8 @@ class LiveTraceExtractor(QObject):
         flat = resized.ravel().astype(np.int32)
         self._flat_labels_cpu = flat
         self._max_label = int(flat.max(initial=0))
-
-        if CUDA_AVAILABLE:
+        
+        if CUDA_USABLE:
             try:
                 self._labels_gpu = cp.asarray(flat)
                 self._ids_gpu = cp.asarray(self.ids)
@@ -2347,7 +2365,7 @@ class LiveTraceExtractor(QObject):
             except Exception as e:
                 print(f"⚠️ Error clearing plot resources: {e}")
 
-            if CUDA_AVAILABLE:
+            if CUDA_USABLE:
                 try:
                     gpu_resources = ['_f_gpu', '_labels_gpu', '_ids_gpu', '_roi_sizes_gpu']
                     for resource in gpu_resources:

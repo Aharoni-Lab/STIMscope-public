@@ -309,11 +309,13 @@ def decode_gray_code_from_files(capture_files: list[str], pattern_meta: list[dic
         return b
     bin_x = _gray_to_bin(gray_x)
     bin_y = _gray_to_bin(gray_y)
-    # Scale to projector pixel coordinates
-    denom_x = float((1 << bx) - 1)
-    denom_y = float((1 << by) - 1)
-    proj_x = (bin_x.astype(np.float32) * (proj_w - 1) / max(1.0, denom_x))
-    proj_y = (bin_y.astype(np.float32) * (proj_h - 1) / max(1.0, denom_y))
+    # Map directly to projector pixel coordinates.
+    # bin_x, bin_y already represent 0..(width-1)/(height-1) because we encoded rows/cols in that range.
+    proj_x = bin_x.astype(np.float32)
+    proj_y = bin_y.astype(np.float32)
+    # Clamp to projector bounds in case of sparse/invalid decodes near edges
+    proj_x = np.clip(proj_x, 0.0, float(proj_w - 1))
+    proj_y = np.clip(proj_y, 0.0, float(proj_h - 1))
     valid = valid_x & valid_y
     proj_x[~valid] = -1.0
     proj_y[~valid] = -1.0
@@ -383,7 +385,10 @@ def prewarp_with_inverse_lut(desired_camera_img_bgr: np.ndarray, inv_x: np.ndarr
     map_x = inv_x.astype(np.float32)
     map_y = inv_y.astype(np.float32)
     cam_h, cam_w = desired_camera_img_bgr.shape[:2]
-    # Do not clip invalid entries; let remap fill with border value
+    # Clamp mapping to valid camera coordinates to avoid remap sampling garbage
+    np.clip(map_x, 0.0, float(cam_w - 1), out=map_x)
+    np.clip(map_y, 0.0, float(cam_h - 1), out=map_y)
+    # Remap with linear interpolation
     warped = cv2.remap(desired_camera_img_bgr, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0))
     return warped
 

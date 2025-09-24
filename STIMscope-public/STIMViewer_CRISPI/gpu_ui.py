@@ -14,6 +14,7 @@ from typing import Optional
 import numpy as np
 import cv2
 from PyQt5 import QtCore, QtGui, QtWidgets
+import subprocess
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
@@ -34,6 +35,21 @@ try:
     CUDA_AVAILABLE = True
 except Exception:
     CUDA_AVAILABLE = False
+
+# Validate CUDA runtime usability (driver/runtime compatibility), not just import
+CUDA_USABLE = False
+if CUDA_AVAILABLE:
+    try:
+        import cupy.cuda.runtime as _cur
+        ndev = _cur.getDeviceCount()
+        if ndev and ndev > 0:
+            _ = cp.arange(1, dtype=cp.int8)
+            CUDA_USABLE = True
+        else:
+            print("ℹ️ No CUDA devices detected; GPU features disabled")
+    except Exception as _e_rt:
+        CUDA_USABLE = False
+        print(f"⚠️ CUDA runtime unusable; GPU features disabled: {_e_rt}")
 
 TRACE_OUT = "live_traces.npy"
 ROIprint_OUT = "roiprint_export.npz"
@@ -229,6 +245,7 @@ class GPU(QtWidgets.QWidget):
 
 
         try:
+            save_npz_components = None
             if self._discover_method == "OTSU":
                 movie = np.load(self.memmap_path, mmap_mode="r")
                 from otsu_thresh import compute_mean_projection, denoise_and_threshold_gpu
@@ -248,7 +265,58 @@ class GPU(QtWidgets.QWidget):
                 for i, m in enumerate(masks, start=1):
                     labeled[m] = i
 
-            elif self._discover_method in ("Cellpose", "CNMF", "Custom"):
+                save_npz_components = (np.asarray(masks, dtype=np.uint8), np.asarray(sizes, dtype=np.int32), labeled)
+
+            elif self._discover_method == "Cellpose":
+                if not self.video_path or not os.path.exists(self.video_path):
+                    print("No valid video file selected")
+                    return
+
+                runner = os.path.join(os.path.dirname(__file__), "cellpose_runner.py")
+                if not os.path.exists(runner):
+                    raise FileNotFoundError(f"cellpose_runner.py not found at {runner}")
+
+                # Prefer user's dedicated Cellpose venv if present
+                venv_python = "/home/aharonilabjetson2/cellpose_env/bin/python"
+                python_exe = venv_python if os.path.exists(venv_python) else sys.executable
+
+                # Optional custom model paths from the user's Cellpose repo
+                cp_base = "/media/aharonilabjetson2/NVMe/projects/U-Net_GPU_Analysis"
+                model_path = os.path.join(cp_base, "cytotorch_0")
+                size_path = os.path.join(cp_base, "size_cytotorch_0.npy")
+
+                cmd = [python_exe, runner, "--video", self.video_path, "--out", self.rois_path]
+                if os.path.exists(model_path):
+                    cmd += ["--model", model_path]
+                if os.path.exists(size_path):
+                    cmd += ["--size", size_path]
+
+                print(f"Running Cellpose via: {' '.join(cmd)}")
+                try:
+                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                    print(res.stdout)
+                    if res.returncode != 0:
+                        raise RuntimeError(f"Cellpose runner failed with code {res.returncode}")
+                except Exception as e:
+                    print(f"Cellpose execution failed: {e}")
+                    raise
+
+                try:
+                    roi_data = np.load(self.rois_path)
+                    if 'labels' in roi_data:
+                        labeled = roi_data['labels'].astype(np.int32)
+                    else:
+                        labeled = np.load(self.rois_path)["labels"].astype(np.int32)
+                except Exception:
+                    labeled = np.load(self.rois_path)["labels"].astype(np.int32)
+
+                # Build masks/sizes for consistency with OTSU path
+                max_id = int(labeled.max(initial=0))
+                masks = [(labeled == i) for i in range(1, max_id + 1)]
+                sizes = [int(m.sum()) for m in masks]
+                save_npz_components = (np.asarray(masks, dtype=np.uint8), np.asarray(sizes, dtype=np.int32), labeled)
+
+            elif self._discover_method in ("CNMF", "Custom"):
                 raise NotImplementedError(f"{self._discover_method} integration not implemented")
             else:
                 raise ValueError(f"Unknown ROI method: {self._discover_method}")
@@ -280,6 +348,8 @@ class GPU(QtWidgets.QWidget):
                 print(f"Failed to project mask: {e}")
 
 
+            if save_npz_components is not None:
+                masks, sizes, labeled = save_npz_components
             np.savez_compressed(self.rois_path, masks=masks, sizes=sizes, labels=labeled)
             print(f"ROIs written to {self.rois_path}")
 
@@ -2330,7 +2400,7 @@ Data Structure:
                 print(f"High CPU usage detected: {cpu:.1f}%")
                 self._optimize_performance()
 
-            if CUDA_AVAILABLE:
+            if CUDA_USABLE:
                 try:
                     pool = cp.get_default_memory_pool()
                     used = float(pool.used_bytes())
@@ -2378,7 +2448,7 @@ Data Structure:
             freed = gc.collect()
             if freed:
                 print(f"Garbage collection freed {freed} objects")
-            if CUDA_AVAILABLE:
+            if CUDA_USABLE:
                 try:
                     cp.get_default_memory_pool().free_all_blocks()
                     print("GPU memory pool cleaned")
@@ -2394,7 +2464,7 @@ Data Structure:
 
             for _ in range(2):
                 gc.collect()
-            if CUDA_AVAILABLE:
+            if CUDA_USABLE:
                 try:
                     cp.get_default_memory_pool().free_all_blocks()
                 except Exception:
@@ -2416,7 +2486,7 @@ Data Structure:
 
     def _cleanup_gpu_memory(self):
         try:
-            if CUDA_AVAILABLE:
+            if CUDA_USABLE:
                 cp.get_default_memory_pool().free_all_blocks()
                 print("GPU memory cleaned")
         except Exception as e:

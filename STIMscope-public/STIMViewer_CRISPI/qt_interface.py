@@ -1,4 +1,3 @@
-
 import sys, time, gc, threading
 from typing import Optional
 import os
@@ -26,6 +25,7 @@ class Interface(QtWidgets.QMainWindow):
     messagebox_pyqtSignal = QtCore.pyqtSignal(str, str)
     image_update_signal = QtCore.pyqtSignal(object)
     fps_update_signal = QtCore.pyqtSignal(float)
+    sl_decode_done = QtCore.pyqtSignal(bool, str)
     from camera import Camera
 
     def __init__(self, cam_module: Optional[Camera] = None):
@@ -71,6 +71,10 @@ class Interface(QtWidgets.QMainWindow):
        
         
         self._qt_instance.aboutToQuit.connect(self._close)
+        try:
+            self.sl_decode_done.connect(self._on_sl_decode_done, QtCore.Qt.QueuedConnection)
+        except Exception:
+            pass
 
         # No minimum size restriction - allow window to be resized freely
         self.setWindowTitle("STIMViewer-CRISPI")
@@ -200,13 +204,30 @@ class Interface(QtWidgets.QMainWindow):
         # New: External control buttons
         self._button_start_projector = QtWidgets.QPushButton("Start Projection Engine")
         self._button_start_projector.clicked.connect(self._toggle_start_projector)
+        self._seq_type_label = QtWidgets.QLabel("Sequence Type")
+        self._seq_type_dropdown = QtWidgets.QComboBox()
+        self._seq_type_dropdown.addItems(["8-bit Mono", "1-bit RGB"])  # maps to first byte of pattern_cfg
+        try:
+            self._seq_type_dropdown.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
+            self._seq_type_dropdown.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        except Exception:
+            pass
+        self._button_toggle_overlay = QtWidgets.QPushButton("Enable Overlay")
+        self._button_toggle_overlay.setCheckable(True)
+        self._button_toggle_overlay.setChecked(True)
+        self._button_toggle_overlay.toggled.connect(self._toggle_overlay)
+        # Initialize label to current state
+        try:
+            self._toggle_overlay(self._button_toggle_overlay.isChecked())
+        except Exception:
+            pass
         self._button_req_hmatrix = QtWidgets.QPushButton("REQ H-Matrix")
         self._button_req_hmatrix.clicked.connect(self._send_hmatrix_to_projector)
         # Mask pattern selection UI
         self._mask_pattern_label = QtWidgets.QLabel("Mask Pattern")
         self._mask_pattern_dropdown = QtWidgets.QComboBox()
         self._mask_pattern_dropdown.addItems([
-            "Moving Bar", "Checkerboard", "Solid", "Circle", "Image", "Folder", "Custom Python"
+            "Moving Bar", "Checkerboard", "Solid", "Circle", "Gradient", "Image", "Folder", "Custom Python"
         ])
         self._mask_pattern_dropdown.currentTextChanged.connect(self._on_mask_pattern_changed)
         self._mask_pattern_browse = QtWidgets.QPushButton("Browse…")
@@ -419,19 +440,26 @@ class Interface(QtWidgets.QMainWindow):
         # Row 1: Projection engine and trigger controls
         row1_layout = QtWidgets.QHBoxLayout()
         row1_layout.addWidget(self._button_start_projector)
+        row1_layout.addWidget(self._seq_type_label)
+        row1_layout.addWidget(self._seq_type_dropdown)
+        row1_layout.addWidget(self._button_toggle_overlay)
         row1_layout.addWidget(self._button_req_hmatrix)
-        row1_layout.addWidget(self._mask_pattern_label)
-        row1_layout.addWidget(self._mask_pattern_dropdown)
-        row1_layout.addWidget(self._mask_pattern_browse)
-        # Shift buttons left: replace stretch with a small spacing
-        row1_layout.addSpacing(8)
-        row1_layout.addWidget(self._button_send_triggers)
-        row1_layout.addWidget(self._button_send_masks)
         row1_widget = QtWidgets.QWidget()
         row1_widget.setLayout(row1_layout)
         config_layout.addWidget(row1_widget,                             1, 0, 1, 2)
         
-        # Row 2 removed: we'll place intensity controls next to Project OFF
+        # New Row 2: mask pattern selection and send controls
+        row2_layout = QtWidgets.QHBoxLayout()
+        row2_layout.addWidget(self._mask_pattern_label)
+        row2_layout.addWidget(self._mask_pattern_dropdown)
+        row2_layout.addWidget(self._mask_pattern_browse)
+        # Shift buttons left: replace stretch with a small spacing
+        row2_layout.addSpacing(8)
+        row2_layout.addWidget(self._button_send_triggers)
+        row2_layout.addWidget(self._button_send_masks)
+        row2_widget = QtWidgets.QWidget()
+        row2_widget.setLayout(row2_layout)
+        config_layout.addWidget(row2_widget,                             2, 0, 1, 2)
         
         # Row 3: Project ON/OFF buttons
         project_buttons_layout = QtWidgets.QHBoxLayout()
@@ -446,36 +474,22 @@ class Interface(QtWidgets.QMainWindow):
         project_buttons_widget.setLayout(project_buttons_layout)
         config_layout.addWidget(project_buttons_widget,                  3, 0, 1, 2)
         
-        # Row 4: Trigger line controls (label followed immediately by dropdown)
-        row_trig_layout = QtWidgets.QHBoxLayout()
-        row_trig_layout.setContentsMargins(0, 0, 0, 0)
-        row_trig_layout.setSpacing(6)
-        row_trig_layout.addWidget(self._label_trigger_line)
-        row_trig_layout.addWidget(self._dropdown_trigger_line)
-        row_trig_widget = QtWidgets.QWidget()
-        row_trig_widget.setLayout(row_trig_layout)
-        config_layout.addWidget(row_trig_widget,                         4, 0, 1, 1, Qt.AlignLeft)
-
-        # Row 5: Camera type controls (label followed immediately by dropdown)
-        row_camtype_layout = QtWidgets.QHBoxLayout()
-        row_camtype_layout.setContentsMargins(0, 0, 0, 0)
-        row_camtype_layout.setSpacing(6)
-        row_camtype_layout.addWidget(self._camera_type_label)
-        row_camtype_layout.addWidget(self.camera_type_dropdown)
-        row_camtype_widget = QtWidgets.QWidget()
-        row_camtype_widget.setLayout(row_camtype_layout)
-        config_layout.addWidget(row_camtype_widget,                      5, 0, 1, 1, Qt.AlignLeft)
-
-        # Row 6: Camera format controls (label followed immediately by dropdown)
+        # Row 4: Combine Trigger Line, Camera Type, and Camera Format in one row
         self._camera_format_label = QtWidgets.QLabel("Camera Format")
-        row_camfmt_layout = QtWidgets.QHBoxLayout()
-        row_camfmt_layout.setContentsMargins(0, 0, 0, 0)
-        row_camfmt_layout.setSpacing(6)
-        row_camfmt_layout.addWidget(self._camera_format_label)
-        row_camfmt_layout.addWidget(self._dropdown_pixel_format)
-        row_camfmt_widget = QtWidgets.QWidget()
-        row_camfmt_widget.setLayout(row_camfmt_layout)
-        config_layout.addWidget(row_camfmt_widget,                       6, 0, 1, 1, Qt.AlignLeft)
+        row_cam_all = QtWidgets.QHBoxLayout()
+        row_cam_all.setContentsMargins(0, 0, 0, 0)
+        row_cam_all.setSpacing(6)
+        row_cam_all.addWidget(self._label_trigger_line)
+        row_cam_all.addWidget(self._dropdown_trigger_line)
+        row_cam_all.addSpacing(12)
+        row_cam_all.addWidget(self._camera_type_label)
+        row_cam_all.addWidget(self.camera_type_dropdown)
+        row_cam_all.addSpacing(12)
+        row_cam_all.addWidget(self._camera_format_label)
+        row_cam_all.addWidget(self._dropdown_pixel_format)
+        row_cam_all_widget = QtWidgets.QWidget()
+        row_cam_all_widget.setLayout(row_cam_all)
+        config_layout.addWidget(row_cam_all_widget,                      4, 0, 1, 2, Qt.AlignLeft)
 
 
         capture_group = QtWidgets.QGroupBox("")
@@ -598,6 +612,10 @@ class Interface(QtWidgets.QMainWindow):
 
         button_bar.setLayout(button_bar_layout)
         self._layout.addWidget(button_bar)
+
+        # SL progress widgets are created in _create_statusbar so they sit on the status bar row
+        self._sl_progress = None
+        self._sl_status = None
 
     def _ensure_qprocess(self):
         # Lazy import to avoid startup penalty if unused
@@ -737,8 +755,10 @@ class Interface(QtWidgets.QMainWindow):
             except Exception:
                 pass
 
-            print(f"[I2C] Launch: {py} {script_path}")
-            self._proc_i2c.start(py, [script_path])
+            # Map sequence type to first byte of pattern_cfg (0x02=8-bit Mono, 0x01=1-bit RGB)
+            seq_first = "0x02" if (self._seq_type_dropdown.currentText() == "8-bit Mono") else "0x01"
+            print(f"[I2C] Launch: {py} {script_path} --seq-first {seq_first}")
+            self._proc_i2c.start(py, [script_path, "--seq-first", seq_first])
         except Exception as e:
             print(f"Failed to start I2C trigger script: {e}")
             self._on_proc_finished('i2c')
@@ -771,7 +791,7 @@ class Interface(QtWidgets.QMainWindow):
                 args = [
                     "--bind=tcp://*:5558",
                     "--swap-interval=1",
-                    "--visible-id=1",
+                    f"--visible-id={'1' if self._button_toggle_overlay.isChecked() else '0'}",
                     "--overlay-style=digits",
                     # Use projector defaults for size/position (compile-time or runtime)
                     "--overlay-bg=1",
@@ -819,6 +839,15 @@ class Interface(QtWidgets.QMainWindow):
                     args = ["--pattern", "solid"]
                 elif pat == "Circle":
                     args = ["--pattern", "circle"]
+                elif pat == "Gradient":
+                    # Use sane defaults for visibility (60 Hz, 6 steps, 20-frame holds, gamma 2.2)
+                    args = [
+                        "--pattern", "gradient",
+                        "--fps", "60",
+                        "--gradient-steps", "6",
+                        "--gradient-hold", "20",
+                        "--gradient-gamma", "2.2"
+                    ]
                 elif pat == "Image":
                     args = ["--pattern", "image", "--image", self._mask_pattern_path]
                 elif pat == "Folder":
@@ -934,7 +963,10 @@ class Interface(QtWidgets.QMainWindow):
        
         status_bar = QtWidgets.QWidget(self.centralWidget())
         status_bar.setMaximumHeight(30)
-        status_bar.setMaximumWidth(400)
+        try:
+            status_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        except Exception:
+            pass
         status_bar_layout = QtWidgets.QHBoxLayout()
         status_bar_layout.setContentsMargins(5, 2, 5, 2)  # Smaller margins
 
@@ -963,8 +995,6 @@ class Interface(QtWidgets.QMainWindow):
         self.projector_status_label.setAlignment(Qt.AlignCenter)
         self.projector_status_label.setToolTip("Projector connection status")
 
-        spacer = QtWidgets.QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
         self.GUIfps_label = QLabel("GUI FPS: 0.00", self)
         self.GUIfps_label.setStyleSheet("font-size: 11px; color: #1c1c1e;")
         self.GUIfps_label.setAlignment(Qt.AlignRight)
@@ -973,10 +1003,28 @@ class Interface(QtWidgets.QMainWindow):
             self.fps_update_signal.connect(self._set_gui_fps, QtCore.Qt.QueuedConnection)
         except Exception:
             pass
+        # SL progress widgets in status row
+        try:
+            self._sl_progress = QtWidgets.QProgressBar(self)
+            self._sl_progress.setRange(0, 0)  # indeterminate by default
+            self._sl_progress.setVisible(False)
+            self._sl_progress.setMaximumWidth(160)
+            self._sl_status = QLabel("", self)
+            self._sl_status.setStyleSheet("font-size: 11px; color: #1c1c1e;")
+        except Exception:
+            self._sl_progress = None
+            self._sl_status = None
 
         status_bar_layout.addWidget(self.acq_label)
+        status_bar_layout.addSpacing(12)
         status_bar_layout.addWidget(self.projector_status_label)
-        status_bar_layout.addItem(spacer)  
+        status_bar_layout.addSpacing(12)
+        if getattr(self, '_sl_progress', None):
+            status_bar_layout.addWidget(self._sl_progress)
+        if getattr(self, '_sl_status', None):
+            status_bar_layout.addWidget(self._sl_status)
+        # Push FPS all the way to the right
+        status_bar_layout.addStretch(1)
         status_bar_layout.addWidget(self.GUIfps_label)
 
         status_bar.setLayout(status_bar_layout)
@@ -997,6 +1045,18 @@ class Interface(QtWidgets.QMainWindow):
             except Exception:
                 pass
             self._camera.shutdown()
+        except Exception:
+            pass
+
+    @QtCore.pyqtSlot(bool, str)
+    def _on_sl_decode_done(self, ok: bool, msg: str):
+        try:
+            if getattr(self, '_sl_progress', None):
+                self._sl_progress.setVisible(False)
+            if getattr(self, '_sl_status', None):
+                self._sl_status.setText("✅ SL ready" if ok else f"❌ SL failed: {msg}")
+            if hasattr(self, '_button_sl_project_reg') and self._button_sl_project_reg is not None:
+                self._button_sl_project_reg.setEnabled(ok)
         except Exception:
             pass
 
@@ -1386,22 +1446,64 @@ class Interface(QtWidgets.QMainWindow):
             print(f"Failed to generate patterns: {e}")
             return
 
+        # Disable LUT-warp button and show progress while running
+        try:
+            if hasattr(self, '_button_sl_project_reg') and self._button_sl_project_reg is not None:
+                self._button_sl_project_reg.setEnabled(False)
+            if getattr(self, '_sl_progress', None):
+                self._sl_progress.setVisible(True)
+                self._sl_status.setText("Capturing structured-light patterns…")
+        except Exception:
+            pass
+
         # 2) Project each pattern and capture a camera frame
         capture_paths = []
+        last_pidx = None
         for idx, (ppath, meta) in enumerate(zip(pattern_paths, patterns)):
             try:
-                img = cv2.imread(ppath, cv2.IMREAD_COLOR)
-                if img is None:
-                    continue
-                # Display raw (no warp, no flip) to ensure LUT decodes pure geometry; flip is not desired here
+                # Prefer in-memory pattern image to avoid disk I/O latency
+                img = None
                 try:
-                    self.projection.show_image_raw_no_warp_no_flip(img)
+                    img = meta.get("image", None)
                 except Exception:
-                    # Fallback to normal path
-                    self.projection.show_image_fullscreen_on_second_monitor(img, None)
-                # Allow projector refresh
+                    img = None
+                if img is None:
+                    img = cv2.imread(ppath, cv2.IMREAD_COLOR)
+                    if img is None:
+                        continue
+                # If projection engine is running and triggers are armed, stream via ZMQ to sync with projector
+                use_engine = hasattr(self, '_proc_projector') and (self._proc_projector is not None)
+                if use_engine:
+                    try:
+                        from projector_client import ProjectorClient
+                        # Projector engine expects 1920x1080 luminance frames; client resizes as needed
+                        client = ProjectorClient()
+                        # Pace strictly: wait for next trigger from last_pidx, then send one frame, then wait until that vis_id appears
+                        if last_pidx is None:
+                            client.wait_next_trigger(0, timeout_ms=500)
+                        else:
+                            client.wait_next_trigger(last_pidx, timeout_ms=500)
+                        client.send_gray(img, frame_id=idx+1, visible_overlay=self._button_toggle_overlay.isChecked())
+                        matched = client.wait_visible(idx+1, timeout_ms=500)
+                        if matched is not None:
+                            last_pidx = matched
+                        client.close()
+                    except Exception as ez:
+                        print(f"[SL] ZMQ send failed, falling back to local display: {ez}")
+                        try:
+                            self.projection.show_image_raw_no_warp_no_flip(img)
+                        except Exception:
+                            self.projection.show_image_fullscreen_on_second_monitor(img, None)
+                else:
+                    # Local path without engine
+                    try:
+                        self.projection.show_image_raw_no_warp_no_flip(img)
+                    except Exception:
+                        self.projection.show_image_fullscreen_on_second_monitor(img, None)
+                # Allow minimal UI processing without delaying engine-paced path
                 QtCore.QCoreApplication.processEvents()
-                QtCore.QThread.msleep(40)
+                if not use_engine:
+                    QtCore.QThread.msleep(40)
                 # Capture a frame
                 save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
                 os.makedirs(save_dir, exist_ok=True)
@@ -1415,26 +1517,45 @@ class Interface(QtWidgets.QMainWindow):
             except Exception as e:
                 print(f"Pattern {idx} projection/capture failed: {e}")
 
-        # 3) Decode LUTs
+        # 3) Decode LUTs (offload to background thread to keep GUI responsive)
         try:
-            # Read a recent frame to get camera size if possible
-            cam_h, cam_w = 1080, 1920
-            for fp in reversed(capture_paths):
-                if not fp:
-                    continue
-                img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
-                if img is not None:
-                    cam_h, cam_w = img.shape[:2]
-                    break
-            proj_x_of_cam, proj_y_of_cam = decode_gray_code_from_files(capture_paths, patterns, cam_h, cam_w, proj_w, proj_h)
-            np.save("/".join([self._camera.asset_dir, "proj_from_cam_x.npy"]), proj_x_of_cam)
-            np.save("/".join([self._camera.asset_dir, "proj_from_cam_y.npy"]), proj_y_of_cam)
-            inv_x, inv_y = invert_cam_to_proj_lut(proj_x_of_cam, proj_y_of_cam, proj_w, proj_h)
-            np.save("/".join([self._camera.asset_dir, "cam_from_proj_x.npy"]), inv_x)
-            np.save("/".join([self._camera.asset_dir, "cam_from_proj_y.npy"]), inv_y)
-            print("✅ Structured-light LUTs saved")
+            def _sl_decode_worker(paths, pats, pw, ph, asset_dir):
+                try:
+                    import numpy as _np, cv2 as _cv2
+                    from calibration import decode_gray_code_from_files as _decode, invert_cam_to_proj_lut as _invert
+                    cam_h, cam_w = 1080, 1920
+                    for _fp in reversed(paths):
+                        if not _fp:
+                            continue
+                        _img = _cv2.imread(_fp, _cv2.IMREAD_GRAYSCALE)
+                        if _img is not None:
+                            cam_h, cam_w = _img.shape[:2]
+                            break
+                    print(f"[SL] Decoding Gray-code at {cam_w}x{cam_h} → proj {pw}x{ph}…")
+                    proj_x_of_cam, proj_y_of_cam = _decode(paths, pats, cam_h, cam_w, pw, ph)
+                    _np.save("/".join([asset_dir, "proj_from_cam_x.npy"]), proj_x_of_cam)
+                    _np.save("/".join([asset_dir, "proj_from_cam_y.npy"]), proj_y_of_cam)
+                    inv_x, inv_y = _invert(proj_x_of_cam, proj_y_of_cam, pw, ph)
+                    _np.save("/".join([asset_dir, "cam_from_proj_x.npy"]), inv_x)
+                    _np.save("/".join([asset_dir, "cam_from_proj_y.npy"]), inv_y)
+                    print("✅ Structured-light LUTs saved (background)")
+                    try:
+                        # Notify GUI thread
+                        self.sl_decode_done.emit(True, "LUTs saved")
+                    except Exception:
+                        pass
+                except Exception as _e:
+                    print(f"Structured-light decoding failed: {_e}")
+                    try:
+                        self.sl_decode_done.emit(False, str(_e))
+                    except Exception:
+                        pass
+
+            import threading as _th
+            _th.Thread(target=_sl_decode_worker, args=(capture_paths, patterns, proj_w, proj_h, self._camera.asset_dir), daemon=True).start()
+            print("[SL] Decoding LUTs in background… GUI remains responsive")
         except Exception as e:
-            print(f"Structured-light decoding failed: {e}")
+            print(f"Structured-light decoding thread failed to start: {e}")
     
     def _sl_project_registration(self):
         """Prewarp and project the custom registration image using LUTs."""
@@ -1475,11 +1596,27 @@ class Interface(QtWidgets.QMainWindow):
                 pass
             # Prewarp
             warped = prewarp_with_inverse_lut(img, inv_x, inv_y, proj_w, proj_h)
-            # Project raw without flip/warp for LUT-based path (LUT already maps correctly)
-            try:
-                self.projection.show_image_raw_no_warp_no_flip(warped)
-            except Exception:
-                self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            # Prefer projection engine via ZMQ if running; ensures sync with triggers
+            use_engine = hasattr(self, '_proc_projector') and (self._proc_projector is not None)
+            if use_engine:
+                try:
+                    from projector_client import ProjectorClient
+                    # Engine expects 1920x1080; client will resize
+                    client = ProjectorClient()
+                    client.send_gray(warped, frame_id=9999, visible_overlay=self._button_toggle_overlay.isChecked())
+                    client.close()
+                except Exception as ez:
+                    print(f"[SL] ZMQ send failed, falling back to local display: {ez}")
+                    try:
+                        self.projection.show_image_raw_no_warp_no_flip(warped)
+                    except Exception:
+                        self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            else:
+                # Project raw without flip/warp (LUT already maps correctly)
+                try:
+                    self.projection.show_image_raw_no_warp_no_flip(warped)
+                except Exception:
+                    self.projection.show_image_fullscreen_on_second_monitor(warped, None)
             print("✅ Projected LUT-prewarped registration")
         except Exception as e:
             print(f"LUT projection failed: {e}")
@@ -1797,3 +1934,13 @@ class Interface(QtWidgets.QMainWindow):
             self._camera._send_h_to_projector(H)
         except Exception as e:
             print(f"REQ H-Matrix failed: {e}")
+
+    def _toggle_overlay(self, checked: bool):
+        try:
+            if not hasattr(self, '_button_toggle_overlay') or self._button_toggle_overlay is None:
+                return
+            self._button_toggle_overlay.setText("Overlay: On" if checked else "Overlay: Off")
+            if hasattr(self, '_proc_projector') and self._proc_projector is not None:
+                print("[PROJ] Overlay toggle changed; restart Projection Engine to apply")
+        except Exception as e:
+            print(f"_toggle_overlay error: {e}")
