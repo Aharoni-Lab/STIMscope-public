@@ -92,11 +92,15 @@ class ProjectDisplay(QMainWindow):
             H_eff = homography_matrix if (isinstance(homography_matrix, np.ndarray) and homography_matrix.shape == (3, 3)) else np.eye(3, dtype=np.float64)
 
             # Always warp to projector resolution with provided or identity homography (keep BGR)
-            img = cv2.warpPerspective(
-                image_bgr, H_eff, (W, H),
-                flags=cv2.INTER_LINEAR,
-                borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
-            )
+            # Allow callers to pass None to skip warping (used when LUT-prewarped content is provided)
+            if homography_matrix is None:
+                img = cv2.resize(image_bgr, (W, H), interpolation=cv2.INTER_LINEAR)
+            else:
+                img = cv2.warpPerspective(
+                    image_bgr, H_eff, (W, H),
+                    flags=cv2.INTER_LINEAR,
+                    borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
+                )
 
             # Optics compensation: flip horizontally at display stage
             try:

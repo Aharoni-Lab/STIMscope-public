@@ -206,7 +206,7 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_projector.clicked.connect(self._toggle_start_projector)
         self._seq_type_label = QtWidgets.QLabel("Sequence Type")
         self._seq_type_dropdown = QtWidgets.QComboBox()
-        self._seq_type_dropdown.addItems(["8-bit Mono", "1-bit RGB"])  # maps to first byte of pattern_cfg
+        self._seq_type_dropdown.addItems(["1-bit RGB", "8-bit Mono"])  # default first
         try:
             self._seq_type_dropdown.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
             self._seq_type_dropdown.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -214,15 +214,22 @@ class Interface(QtWidgets.QMainWindow):
             pass
         self._button_toggle_overlay = QtWidgets.QPushButton("Enable Overlay")
         self._button_toggle_overlay.setCheckable(True)
-        self._button_toggle_overlay.setChecked(True)
+        self._button_toggle_overlay.setChecked(False)
         self._button_toggle_overlay.toggled.connect(self._toggle_overlay)
         # Initialize label to current state
         try:
             self._toggle_overlay(self._button_toggle_overlay.isChecked())
         except Exception:
             pass
+        self._proj_warp_mode = "H"  # "H" or "LUT"
         self._button_req_hmatrix = QtWidgets.QPushButton("REQ H-Matrix")
-        self._button_req_hmatrix.clicked.connect(self._send_hmatrix_to_projector)
+        self._button_req_hmatrix.setCheckable(True)
+        self._button_req_hmatrix.setChecked(True)
+        self._button_req_hmatrix.toggled.connect(self._on_warp_h_toggled)
+        self._button_use_lut = QtWidgets.QPushButton("REQ LUT")
+        self._button_use_lut.setCheckable(True)
+        self._button_use_lut.setChecked(False)
+        self._button_use_lut.toggled.connect(self._on_warp_lut_toggled)
         # Mask pattern selection UI
         self._mask_pattern_label = QtWidgets.QLabel("Mask Pattern")
         self._mask_pattern_dropdown = QtWidgets.QComboBox()
@@ -243,9 +250,39 @@ class Interface(QtWidgets.QMainWindow):
 
 
         
-        self._button_show_gpu_ui = QtWidgets.QPushButton("Real-Time Trace")
+        self._button_show_gpu_ui = QtWidgets.QPushButton("Real-Time Trace Extraction")
         self._button_show_gpu_ui.clicked.connect(self.show_gpu_ui)
         self._button_show_gpu_ui.setEnabled(_GPU_AVAILABLE)
+        try:
+            self._button_show_gpu_ui.setStyleSheet(
+                """
+                QPushButton {
+                    color: #000000; /* keep text black */
+                    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f5eeff, stop:1 #ece2ff);
+                    border: 1px solid #cdbcf3;
+                    border-radius: 6px;
+                    padding: 4px 10px;
+                }
+                QPushButton:hover {
+                    color: #000000;
+                    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f2e9ff, stop:1 #e4d6ff);
+                    border: 1px solid #b49cf0;
+                }
+                QPushButton:pressed {
+                    color: #000000;
+                    background-color: #dbcaff;
+                }
+                QPushButton:disabled {
+                    color: #b8b6c9;
+                    background-color: #fafafa;
+                    border: 1px solid #eeeeee;
+                }
+                """
+            )
+        except Exception:
+            pass
         
 
 
@@ -444,12 +481,23 @@ class Interface(QtWidgets.QMainWindow):
         row1_layout.addWidget(self._seq_type_dropdown)
         row1_layout.addWidget(self._button_toggle_overlay)
         row1_layout.addWidget(self._button_req_hmatrix)
+        row1_layout.addWidget(self._button_use_lut)
         row1_widget = QtWidgets.QWidget()
         row1_widget.setLayout(row1_layout)
         config_layout.addWidget(row1_widget,                             1, 0, 1, 2)
         
         # New Row 2: mask pattern selection and send controls
         row2_layout = QtWidgets.QHBoxLayout()
+        # Hardware trigger out toggle (left side of Mask Pattern)
+        self._button_hw_trig = QtWidgets.QPushButton("HW Trigger Out")
+        self._button_hw_trig.setCheckable(True)
+        self._button_hw_trig.setChecked(False)
+        try:
+            self._button_hw_trig.setToolTip("Toggle GPIO trigger out on every projector frame (BOARD pin 22)")
+        except Exception:
+            pass
+        self._button_hw_trig.toggled.connect(self._toggle_hw_trigger_out)
+        row2_layout.addWidget(self._button_hw_trig)
         row2_layout.addWidget(self._mask_pattern_label)
         row2_layout.addWidget(self._mask_pattern_dropdown)
         row2_layout.addWidget(self._mask_pattern_browse)
@@ -469,6 +517,14 @@ class Interface(QtWidgets.QMainWindow):
         project_buttons_layout.addWidget(self._project_intensity_label)
         project_buttons_layout.addWidget(self._project_intensity_slider)
         project_buttons_layout.addWidget(self._project_intensity_value_label)
+        # Troubleshooting button
+        self._button_troubleshoot = QtWidgets.QPushButton("Troubleshooting")
+        try:
+            self._button_troubleshoot.setToolTip("Open troubleshooting tools: GPIO test, engine/camera status, performance graphs")
+        except Exception:
+            pass
+        self._button_troubleshoot.clicked.connect(self._open_troubleshoot_window)
+        project_buttons_layout.addWidget(self._button_troubleshoot)
         project_buttons_layout.addStretch()
         project_buttons_widget = QtWidgets.QWidget()
         project_buttons_widget.setLayout(project_buttons_layout)
@@ -697,6 +753,331 @@ class Interface(QtWidgets.QMainWindow):
         except Exception as e:
             print(f"Browse failed: {e}")
 
+    def _toggle_hw_trigger_out(self, checked: bool):
+        """Enable/disable GPIO trigger out on Jetson BOARD pin 22.
+        When enabled, each engine frame send will emit a short pulse.
+        """
+        try:
+            import Jetson.GPIO as GPIO
+            pin = 22  # J30 pin 22 -> GPIO17
+            if checked:
+                GPIO.setmode(GPIO.BOARD)
+                GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+                self._hw_trig_pin = pin
+                self._hw_trig_enabled = True
+                print("[HWTRIG] Enabled on BOARD pin 22")
+                # Start background subscriber that pulses on every projector visibility event
+                try:
+                    import threading as _th
+                    import zmq as _zmq
+                    self._hw_trig_stop = _th.Event()
+
+                    def _loop():
+                        last_pidx = 0
+                        try:
+                            ctx = _zmq.Context.instance()
+                            sub = ctx.socket(_zmq.SUB)
+                            sub.setsockopt(_zmq.LINGER, 0)
+                            sub.setsockopt_string(_zmq.SUBSCRIBE, "")
+                            sub.connect("tcp://127.0.0.1:5562")
+                        except Exception as _e:
+                            print(f"[HWTRIG] SUB init error: {_e}")
+                            return
+                        while not self._hw_trig_stop.is_set():
+                            try:
+                                msg = sub.recv(flags=_zmq.NOBLOCK)
+                                s = msg.decode('utf-8', errors='ignore')
+                                # Minimal JSON parse
+                                pidx = None
+                                vis = None
+                                try:
+                                    import json as _json
+                                    d = _json.loads(s)
+                                    pidx = int(d.get('pidx', 0))
+                                    vis = int(d.get('vis_id', -1))
+                                except Exception:
+                                    pass
+                                if pidx is not None and pidx > last_pidx and vis is not None and vis >= 0:
+                                    try:
+                                        GPIO.output(pin, GPIO.HIGH)
+                                        import time as _t
+                                        _t.sleep(0.001)
+                                        GPIO.output(pin, GPIO.LOW)
+                                    except Exception as _e:
+                                        print(f"[HWTRIG] Pulse error: {_e}")
+                                    last_pidx = pidx
+                            except Exception:
+                                # No message yet
+                                import time as _t
+                                _t.sleep(0.005)
+
+                    self._hw_trig_thread = _th.Thread(target=_loop, daemon=True)
+                    self._hw_trig_thread.start()
+                except Exception as _e:
+                    print(f"[HWTRIG] Subscriber start error: {_e}")
+            else:
+                try:
+                    GPIO.output(getattr(self, '_hw_trig_pin', pin), GPIO.LOW)
+                    GPIO.cleanup(getattr(self, '_hw_trig_pin', pin))
+                except Exception:
+                    pass
+                self._hw_trig_enabled = False
+                print("[HWTRIG] Disabled and cleaned up")
+                # Stop background subscriber
+                try:
+                    if hasattr(self, '_hw_trig_stop') and self._hw_trig_stop is not None:
+                        self._hw_trig_stop.set()
+                    if hasattr(self, '_hw_trig_thread') and self._hw_trig_thread is not None:
+                        self._hw_trig_thread.join(timeout=0.5)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[HWTRIG] Setup error: {e}")
+
+    def _test_hw_trigger_pulse(self):
+        try:
+            import Jetson.GPIO as GPIO, time as _t
+            pin = 22
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+            print("[HWTRIG] Test: 5 pulses on BOARD 22")
+            for _ in range(5):
+                GPIO.output(pin, GPIO.HIGH); _t.sleep(0.01)
+                GPIO.output(pin, GPIO.LOW);  _t.sleep(0.01)
+            # leave low
+        except Exception as e:
+            print(f"[HWTRIG] Test pulse error: {e}")
+
+    # ---------------- Troubleshooting Window ----------------
+    def _open_troubleshoot_window(self):
+        try:
+            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout
+            import psutil, os
+        except Exception as e:
+            print(f"Troubleshooting UI error: {e}")
+            return
+
+        # Optional plotting
+        try:
+            import pyqtgraph as pg
+            _HAS_PG = True
+        except Exception:
+            _HAS_PG = False
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Troubleshooting")
+        dlg.setMinimumSize(680, 420)
+        lay = QVBoxLayout(dlg)
+
+        # Row: quick actions & engine monitor toggle
+        row = QHBoxLayout()
+        btn_test = QtWidgets.QPushButton("Test HW Trigger Out Pulse")
+        btn_test.clicked.connect(self._test_hw_trigger_pulse)
+        btn_mon = QtWidgets.QPushButton("Start Engine Monitor")
+        btn_mon.setCheckable(True)
+        status_lbl = QLabel("Engine: idle")
+        last_lbl = QLabel("Last: pidx=-- vis=-- rate=-- Hz")
+        # Trigger indicator button (non-interactive)
+        ind_btn = QtWidgets.QPushButton("Projector Trigger: OFF")
+        ind_btn.setEnabled(False)
+        ind_btn.setStyleSheet("QPushButton{background-color:#ff4d4f; color:white; border-radius:6px; padding:4px 8px;}")
+        row.addWidget(btn_test)
+        row.addSpacing(10)
+        row.addWidget(btn_mon)
+        row.addSpacing(10)
+        row.addWidget(status_lbl)
+        row.addSpacing(10)
+        row.addWidget(ind_btn)
+        row.addStretch()
+        lay.addLayout(row)
+
+        # Live graphs (CPU, GPU, Mem)
+        grid = QGridLayout()
+        if _HAS_PG:
+            pg.setConfigOptions(antialias=True)
+            cpu_plot = pg.PlotWidget()
+            cpu_plot.setTitle("CPU %")
+            cpu_curve = cpu_plot.plot(pen=pg.mkPen('#2ecc71', width=2))
+            mem_plot = pg.PlotWidget()
+            mem_plot.setTitle("Mem %")
+            mem_curve = mem_plot.plot(pen=pg.mkPen('#3498db', width=2))
+            gpu_plot = pg.PlotWidget()
+            gpu_plot.setTitle("GPU %")
+            gpu_curve = gpu_plot.plot(pen=pg.mkPen('#9b59b6', width=2))
+            grid.addWidget(cpu_plot, 0, 0)
+            grid.addWidget(mem_plot, 0, 1)
+            grid.addWidget(gpu_plot, 0, 2)
+        else:
+            lbl_cpu = QLabel("CPU: -- %")
+            lbl_mem = QLabel("Mem: -- %")
+            lbl_gpu = QLabel("GPU: -- %")
+            grid.addWidget(lbl_cpu, 0, 0)
+            grid.addWidget(lbl_mem, 0, 1)
+            grid.addWidget(lbl_gpu, 0, 2)
+        lay.addLayout(grid)
+
+        # State for monitors
+        from collections import deque
+        cpu_hist = deque(maxlen=120)
+        mem_hist = deque(maxlen=120)
+        gpu_hist = deque(maxlen=120)
+        trig_times = deque(maxlen=200)
+        last_pidx = [0]
+        running = {"engine": False}
+
+        # GPU via NVML if available
+        _HAS_NVML = False
+        try:
+            import pynvml
+            pynvml.nvmlInit()
+            _nvdev = pynvml.nvmlDeviceGetHandleByIndex(0)
+            _HAS_NVML = True
+        except Exception:
+            _HAS_NVML = False
+
+        def _sample_perf():
+            try:
+                cpu_hist.append(psutil.cpu_percent(interval=None))
+                mem_hist.append(psutil.virtual_memory().percent)
+            except Exception:
+                cpu_hist.append(0.0)
+                mem_hist.append(0.0)
+            if _HAS_NVML:
+                try:
+                    util = pynvml.nvmlDeviceGetUtilizationRates(_nvdev)
+                    gpu_hist.append(float(util.gpu))
+                except Exception:
+                    gpu_hist.append(0.0)
+            else:
+                # Fallback: Tegra GPU load from sysfs (0-255 -> %)
+                try:
+                    with open("/sys/devices/gpu.0/load", "r") as f:
+                        val = f.read().strip()
+                        v = float(val) if val else 0.0
+                        gpu_hist.append(min(100.0, max(0.0, (v / 255.0) * 100.0)))
+                except Exception:
+                    gpu_hist.append(0.0)
+            if _HAS_PG:
+                cpu_curve.setData(list(range(len(cpu_hist))), list(cpu_hist))
+                mem_curve.setData(list(range(len(mem_hist))), list(mem_hist))
+                gpu_curve.setData(list(range(len(gpu_hist))), list(gpu_hist))
+            else:
+                try:
+                    lbl_cpu.setText(f"CPU: {cpu_hist[-1]:.1f} %")
+                    lbl_mem.setText(f"Mem: {mem_hist[-1]:.1f} %")
+                    lbl_gpu.setText(f"GPU: {gpu_hist[-1]:.1f} %")
+                except Exception:
+                    pass
+
+        # Engine subscriber thread
+        last_event_ts = {"t": 0.0}
+        engine_status = {"text": "idle"}
+
+        def _set_indicator(on: bool):
+            try:
+                if on:
+                    ind_btn.setText("Projector Trigger: ON")
+                    ind_btn.setStyleSheet("QPushButton{background-color:#52c41a; color:white; border-radius:6px; padding:4px 8px;}")
+                else:
+                    ind_btn.setText("Projector Trigger: OFF")
+                    ind_btn.setStyleSheet("QPushButton{background-color:#ff4d4f; color:white; border-radius:6px; padding:4px 8px;}")
+            except Exception:
+                pass
+
+        def _start_engine_sub():
+            import threading as _th, zmq as _zmq, json, time as _t
+            running["engine"] = True
+            engine_status["text"] = "connecting…"
+            def _loop():
+                try:
+                    ctx = _zmq.Context.instance()
+                    sub = ctx.socket(_zmq.SUB)
+                    sub.setsockopt(_zmq.LINGER, 0)
+                    sub.setsockopt_string(_zmq.SUBSCRIBE, "")
+                    sub.connect("tcp://127.0.0.1:5562")
+                except Exception as e:
+                    engine_status["text"] = f"error {e}"
+                    running["engine"] = False
+                    return
+                engine_status["text"] = "monitoring"
+                while running["engine"]:
+                    try:
+                        msg = sub.recv(flags=_zmq.NOBLOCK)
+                        d = json.loads(msg.decode('utf-8', errors='ignore'))
+                        p = int(d.get('pidx', 0))
+                        v = int(d.get('vis_id', -1))
+                        if p > last_pidx[0]:
+                            last_pidx[0] = p
+                            from time import time as now
+                            ts = now()
+                            trig_times.append(ts)
+                            last_event_ts["t"] = ts
+                            # UI updated on main thread via timer
+                    except Exception:
+                        _t.sleep(0.02)
+                try:
+                    sub.close(0)
+                except Exception:
+                    pass
+                engine_status["text"] = "stopped"
+            th = _th.Thread(target=_loop, daemon=True)
+            th.start()
+            dlg._engine_thread = th
+
+        def _stop_engine_sub():
+            running["engine"] = False
+
+        def _toggle_engine_monitor(checked: bool):
+            if checked:
+                btn_mon.setText("Stop Engine Monitor")
+                _start_engine_sub()
+            else:
+                btn_mon.setText("Start Engine Monitor")
+                _stop_engine_sub()
+
+        btn_mon.toggled.connect(_toggle_engine_monitor)
+
+        # Periodic perf updates and trigger indicator decay
+        try:
+            from PyQt5.QtCore import QTimer
+            tm = QTimer(dlg)
+            def _tick():
+                _sample_perf()
+                # turn indicator OFF if no triggers for 0.5s
+                try:
+                    import time as _t
+                    if running["engine"]:
+                        if (_t.time() - last_event_ts.get("t", 0.0)) > 0.5:
+                            _set_indicator(False)
+                        else:
+                            _set_indicator(True)
+                    # update engine status and last rate text
+                    status_lbl.setText(f"Engine: {engine_status.get('text','')}" )
+                    # compute rate over last second for display
+                    if trig_times:
+                        t1 = trig_times[-1]
+                        n = len([t for t in trig_times if t1 - t <= 1.0])
+                        last_lbl.setText(f"Last: pidx={last_pidx[0]} vis=? rate={n} Hz")
+                except Exception:
+                    pass
+            tm.timeout.connect(_tick)
+            tm.start(1000)
+        except Exception:
+            pass
+
+        def _on_close():
+            try:
+                _stop_engine_sub()
+            except Exception:
+                pass
+
+        try:
+            dlg.finished.connect(lambda *_: _on_close())
+        except Exception:
+            pass
+
+        dlg.show()
+
     def _helper_python_path_for_i2c(self) -> str:
         """Pick Python for I2C (prefer system where smbus2 is typically available)."""
         for cand in ("/usr/bin/python3", "/usr/local/bin/python3", sys.executable):
@@ -844,8 +1225,8 @@ class Interface(QtWidgets.QMainWindow):
                     args = [
                         "--pattern", "gradient",
                         "--fps", "60",
-                        "--gradient-steps", "6",
-                        "--gradient-hold", "20",
+                        "--gradient-steps", "3",
+                        "--gradient-hold", "30",
                         "--gradient-gamma", "2.2"
                     ]
                 elif pat == "Image":
@@ -995,7 +1376,7 @@ class Interface(QtWidgets.QMainWindow):
         self.projector_status_label.setAlignment(Qt.AlignCenter)
         self.projector_status_label.setToolTip("Projector connection status")
 
-        self.GUIfps_label = QLabel("GUI FPS: 0.00", self)
+        self.GUIfps_label = QLabel("Frame rate: 0.00", self)
         self.GUIfps_label.setStyleSheet("font-size: 11px; color: #1c1c1e;")
         self.GUIfps_label.setAlignment(Qt.AlignRight)
         self.GUIfps_label.setToolTip("Calculated FPS over a rolling average of 2 seconds. If set to hardware trigger mode, camera only supports <45 fps.")
@@ -1033,7 +1414,7 @@ class Interface(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(float)
     def _set_gui_fps(self, fps: float):
         try:
-            self.GUIfps_label.setText(f"GUI FPS: {fps:.2f}")
+            self.GUIfps_label.setText(f"Frame rate: {fps:.2f}")
         except Exception:
             pass
 
@@ -1372,10 +1753,17 @@ class Interface(QtWidgets.QMainWindow):
                 print(f"Calibration image not readable: {img_path}")
                 return
 
-            self.projection.show_image_fullscreen_on_second_monitor(
-                img,
-                getattr(self._camera, "translation_matrix", None)
-            )
+            # Respect current warp mode: H uses homography, LUT uses prewarped content (no H)
+            if getattr(self, '_proj_warp_mode', 'H') == 'H':
+                self.projection.show_image_fullscreen_on_second_monitor(
+                    img,
+                    getattr(self._camera, "translation_matrix", None)
+                )
+            else:
+                self.projection.show_image_fullscreen_on_second_monitor(
+                    img,
+                    None
+                )
             print("projectionnnnnn")
 
 
@@ -1603,7 +1991,11 @@ class Interface(QtWidgets.QMainWindow):
                     from projector_client import ProjectorClient
                     # Engine expects 1920x1080; client will resize
                     client = ProjectorClient()
+                    if getattr(self, '_button_hw_trig', None) and self._button_hw_trig.isChecked():
+                        client.enable_gpio_trigger(22)
                     client.send_gray(warped, frame_id=9999, visible_overlay=self._button_toggle_overlay.isChecked())
+                    # Optionally wait for visibility, but pulsing is now handled by background subscriber when enabled
+                    _ = client.wait_visible(9999, timeout_ms=250)
                     client.close()
                 except Exception as ez:
                     print(f"[SL] ZMQ send failed, falling back to local display: {ez}")
@@ -1934,6 +2326,74 @@ class Interface(QtWidgets.QMainWindow):
             self._camera._send_h_to_projector(H)
         except Exception as e:
             print(f"REQ H-Matrix failed: {e}")
+
+    def _select_warp_h(self):
+        # Toggle behavior: if already active, turn off; else activate H and deactivate LUT
+        try:
+            if getattr(self, '_proj_warp_mode', 'H') == 'H' and self._button_req_hmatrix.isChecked():
+                # Deactivate
+                self._proj_warp_mode = "NONE"
+                self._button_req_hmatrix.setChecked(False)
+                print("[PROJ] Warp mode: None (no H applied)")
+            else:
+                self._proj_warp_mode = "H"
+                if hasattr(self, '_button_req_hmatrix'):
+                    self._button_req_hmatrix.setChecked(True)
+                if hasattr(self, '_button_use_lut'):
+                    self._button_use_lut.setChecked(False)
+                # Send H to projector immediately
+                self._send_hmatrix_to_projector()
+                print("[PROJ] Warp mode: Homography (H)")
+        except Exception as e:
+            print(f"Warp H select failed: {e}")
+
+    def _select_warp_lut(self):
+        # Toggle behavior: if already active, turn off; else activate LUT and deactivate H
+        try:
+            if getattr(self, '_proj_warp_mode', 'H') == 'LUT' and self._button_use_lut.isChecked():
+                self._proj_warp_mode = "NONE"
+                self._button_use_lut.setChecked(False)
+                print("[PROJ] Warp mode: None (no H; content not assumed prewarped)")
+            else:
+                self._proj_warp_mode = "LUT"
+                if hasattr(self, '_button_req_hmatrix'):
+                    self._button_req_hmatrix.setChecked(False)
+                if hasattr(self, '_button_use_lut'):
+                    self._button_use_lut.setChecked(True)
+                print("[PROJ] Warp mode: LUT (engine will display prewarped content)")
+        except Exception as e:
+            print(f"Warp LUT select failed: {e}")
+
+    def _on_warp_h_toggled(self, checked: bool):
+        if checked:
+            # activate H
+            self._proj_warp_mode = "H"
+            try:
+                if hasattr(self, '_button_use_lut'):
+                    self._button_use_lut.setChecked(False)
+            except Exception:
+                pass
+            self._send_hmatrix_to_projector()
+            print("[PROJ] Warp mode: Homography (H)")
+        else:
+            # if H turned off and LUT not active → NONE
+            if (getattr(self, '_button_use_lut', None) is None) or (not self._button_use_lut.isChecked()):
+                self._proj_warp_mode = "NONE"
+                print("[PROJ] Warp mode: None")
+
+    def _on_warp_lut_toggled(self, checked: bool):
+        if checked:
+            self._proj_warp_mode = "LUT"
+            try:
+                if hasattr(self, '_button_req_hmatrix'):
+                    self._button_req_hmatrix.setChecked(False)
+            except Exception:
+                pass
+            print("[PROJ] Warp mode: LUT (engine will display prewarped content)")
+        else:
+            if (getattr(self, '_button_req_hmatrix', None) is None) or (not self._button_req_hmatrix.isChecked()):
+                self._proj_warp_mode = "NONE"
+                print("[PROJ] Warp mode: None")
 
     def _toggle_overlay(self, checked: bool):
         try:

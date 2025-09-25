@@ -68,6 +68,7 @@ class ProjectorClient:
                     _ = self._sub.recv(flags=self._zmq.NOBLOCK)
                 except Exception:
                     pass
+            # Note: GPIO pulse is handled by callers after confirming visibility via PUB/trigger
         except Exception:
             # Best-effort send; drop if engine not present
             self.close()
@@ -84,10 +85,39 @@ class ProjectorClient:
                 s = msg.decode('utf-8', errors='ignore')
                 data = json.loads(s)
                 if int(data.get('vis_id', -1)) == int(expected_vis_id):
+                    # Emit GPIO pulse here if enabled (engine confirmed visibility)
+                    if getattr(self, '_gpio_enabled', False):
+                        try:
+                            import Jetson.GPIO as GPIO, time as _t
+                            GPIO.output(self._gpio_pin, GPIO.HIGH)
+                            _t.sleep(0.001)
+                            GPIO.output(self._gpio_pin, GPIO.LOW)
+                        except Exception:
+                            pass
                     return int(data.get('pidx', 0))
             except Exception:
                 pass
         return None
+
+    # --- GPIO trigger out control ---
+    def enable_gpio_trigger(self, pin_board: int = 22):
+        try:
+            import Jetson.GPIO as GPIO
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setup(pin_board, GPIO.OUT, initial=GPIO.LOW)
+            self._gpio_enabled = True
+            self._gpio_pin = int(pin_board)
+        except Exception:
+            self._gpio_enabled = False
+            self._gpio_pin = int(pin_board)
+
+    def disable_gpio_trigger(self):
+        try:
+            import Jetson.GPIO as GPIO
+            GPIO.output(getattr(self, '_gpio_pin', 22), GPIO.LOW)
+        except Exception:
+            pass
+        self._gpio_enabled = False
 
     def wait_next_trigger(self, last_pidx: Optional[int], timeout_ms: int = 500) -> Optional[int]:
         """Block until projector pidx advances beyond last_pidx. Return new pidx."""
