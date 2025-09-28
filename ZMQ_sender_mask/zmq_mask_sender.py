@@ -98,6 +98,38 @@ def build_patterns(args):
         else:
             seq.append(blank())
         return None, seq
+    elif args.pattern == "segmask":
+        # Load labels or masks from NPZ and create a single grayscale frame
+        fp = getattr(args, 'roi_npz', '') or os.path.join(os.getcwd(), "rois.npz")
+        try:
+            data = np.load(fp, allow_pickle=True)
+            if 'labels' in data:
+                labels = data['labels'].astype(np.int32)
+                img = (labels > 0).astype(np.uint8) * 255
+            elif 'masks' in data:
+                masks = data['masks']
+                if isinstance(masks, np.ndarray) and masks.ndim == 3 and masks.shape[0] > 0:
+                    img = (masks[0].astype(bool)).astype(np.uint8) * 255
+                elif isinstance(masks, list) and len(masks) > 0:
+                    img = (np.array(masks[0]).astype(bool)).astype(np.uint8) * 255
+                else:
+                    img = blank()
+            else:
+                img = blank()
+            # Pad to projector size without scaling if smaller
+            ih, iw = img.shape[:2]
+            if ih <= H and iw <= W:
+                pad_top = (H - ih) // 2
+                pad_bottom = H - ih - pad_top
+                pad_left = (W - iw) // 2
+                pad_right = W - iw - pad_left
+                img = np.pad(img, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant', constant_values=0)
+            else:
+                img = np.array(Image.fromarray(img).resize((W, H), resample=Image.NEAREST))
+            return None, [img]
+        except Exception as _e:
+            print(f"⚠️  segmask load failed: {_e}")
+            return None, [blank()]
     elif args.pattern == "checkerboard":
         return checkerboard, None
     elif args.pattern == "solid":
@@ -114,7 +146,7 @@ def main():
     ap.add_argument("--endpoint", default="tcp://127.0.0.1:5558")
     ap.add_argument("--fps", type=float, default=60.0)
     ap.add_argument("--pattern", default="moving_bar",
-                    choices=["moving_bar", "checkerboard", "solid", "circle", "gradient", "image", "folder"]) 
+                    choices=["moving_bar", "checkerboard", "solid", "circle", "gradient", "image", "folder", "segmask"]) 
     ap.add_argument("--speed", type=float, default=400.0)
     ap.add_argument("--bar-width", dest="bar_width", type=int, default=40)
     ap.add_argument("--value", type=int, default=255)
@@ -125,6 +157,10 @@ def main():
     ap.add_argument("--gradient-steps", dest="gradient_steps", type=int, default=6)
     ap.add_argument("--gradient-hold", dest="gradient_hold", type=int, default=20)
     ap.add_argument("--gradient-gamma", dest="gradient_gamma", type=float, default=2.2)
+    ap.add_argument("--prewarp-lut-dir", type=str, default="",
+                    help="If set, load cam_from_proj_{x,y}.npy from this dir and prewarp frames")
+    ap.add_argument("--roi-npz", type=str, default="",
+                    help="Path to rois.npz containing 'labels' or 'masks'")
     args = ap.parse_args()
 
     global W, H
@@ -142,10 +178,44 @@ def main():
     s.setsockopt(zmq.SNDTIMEO, 0)
     s.connect(args.endpoint)
 
+    # Optional LUT prewarp (projector expects prewarped content when H is cleared)
+    inv_x = inv_y = None
+    if args.prewarp_lut_dir:
+        try:
+            import numpy as _np
+            import os as _os
+            inv_x = _np.load(_os.path.join(args.prewarp_lut_dir, "cam_from_proj_x.npy")).astype(np.float32)
+            inv_y = _np.load(_os.path.join(args.prewarp_lut_dir, "cam_from_proj_y.npy")).astype(np.float32)
+        except Exception as _e:
+            print(f"⚠️  Failed to load LUTs from {args.prewarp_lut_dir}: {_e}")
+            inv_x = inv_y = None
+
+    def _prewarp(img_gray: np.ndarray) -> np.ndarray:
+        if inv_x is None or inv_y is None:
+            return img_gray
+        try:
+            import cv2 as _cv2
+            h, w = img_gray.shape[:2]
+            # Resize LUT if projector size differs
+            if inv_x.shape != (H, W):
+                _ix = _cv2.resize(inv_x, (W, H), interpolation=_cv2.INTER_LINEAR)
+                _iy = _cv2.resize(inv_y, (W, H), interpolation=_cv2.INTER_LINEAR)
+            else:
+                _ix, _iy = inv_x, inv_y
+            # Build camera image (expand gray to BGR for remap, then collapse)
+            cam_bgr = _cv2.cvtColor(img_gray, _cv2.COLOR_GRAY2BGR)
+            warped = _cv2.remap(cam_bgr, _ix, _iy, interpolation=_cv2.INTER_LINEAR,
+                                borderMode=_cv2.BORDER_CONSTANT, borderValue=(0,0,0))
+            return _cv2.cvtColor(warped, _cv2.COLOR_BGR2GRAY)
+        except Exception as _e:
+            print(f"⚠️  LUT prewarp failed: {_e}")
+            return img_gray
+
     def send_mask(mid, img):
         meta = json.dumps({"id": int(mid)}).encode()
         try:
-            s.send_multipart([meta, img.tobytes()], flags=zmq.DONTWAIT)
+            frame = _prewarp(img)
+            s.send_multipart([meta, frame.tobytes()], flags=zmq.DONTWAIT)
             return True
         except zmq.Again:
             return False

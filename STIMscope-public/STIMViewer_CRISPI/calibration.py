@@ -251,6 +251,33 @@ def save_gray_code_patterns(patterns: list[dict], out_dir: Path = SL_DIR) -> lis
         paths.append(path.as_posix())
     return paths
 
+def save_structured_light_patterns(patterns: list[dict], out_dir: Path = SL_DIR) -> list[str]:
+    """Save a heterogeneous list of structured-light patterns (Gray + Phase).
+    Supports entries from generate_gray_code_patterns(...) and
+    generate_phase_shift_patterns(...).
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[str] = []
+    for idx, p in enumerate(patterns):
+        try:
+            img = p.get("image")
+            if img is None:
+                continue
+            axis = p.get("axis", "x")
+            if p.get("type") == "phase":
+                k = int(p.get("phase_idx", idx))
+                path = out_dir / f"pat_{idx:03d}_{axis}_phase_{k}.png"
+            else:
+                # Backward-compatible Gray-code naming
+                bit = int(p.get("bit", -1))
+                inv = "inv" if bool(p.get("inv", False)) else "pos"
+                path = out_dir / f"pat_{idx:03d}_{axis}_b{bit}_{inv}.png"
+            cv2.imwrite(path.as_posix(), img)
+            paths.append(path.as_posix())
+        except Exception:
+            continue
+    return paths
+
 def decode_gray_code_from_files(capture_files: list[str], pattern_meta: list[dict], cam_h: int, cam_w: int, proj_w: int, proj_h: int) -> tuple[np.ndarray, np.ndarray]:
     """Decode Gray code projection captures to per-camera-pixel projector coords.
     Returns (proj_x_of_cam [H,W], proj_y_of_cam [H,W]) as float32 with -1 for invalid.
@@ -283,17 +310,32 @@ def decode_gray_code_from_files(capture_files: list[str], pattern_meta: list[dic
                 bits_y[bit] = {"pos": None, "inv": None}
             key = "inv" if inv else "pos"
             bits_y[bit][key] = cap
-    # Decide bits via pos>inv
+    # Decide bits via pos>inv - simple threshold but with diagnostics
     def _decide(bits_list, num_bits):
         vals = np.zeros((cam_h, cam_w), dtype=np.int32)
         valid = np.ones((cam_h, cam_w), dtype=bool)
+        contrast_sum = 0
         for b in range(num_bits - 1, -1, -1):
             pair = bits_list[b]
             if pair is None or pair["pos"] is None or pair["inv"] is None:
                 valid[:] = False
                 continue
-            bitmask = (pair["pos"].astype(np.int16) - pair["inv"].astype(np.int16)) > 0
+            # Simple difference threshold
+            diff = pair["pos"].astype(np.int16) - pair["inv"].astype(np.int16)
+            
+            # Log contrast for diagnostics
+            contrast = np.mean(np.abs(diff))
+            contrast_sum += contrast
+            
+            # Simple threshold at 0
+            bitmask = diff > 0
             vals = (vals << 1) | bitmask.astype(np.int32)
+        
+        # Print average contrast
+        if num_bits > 0:
+            avg_contrast = contrast_sum / num_bits
+            print(f"Gray code average contrast: {avg_contrast:.1f} gray levels")
+        
         return vals, valid
     gray_x, valid_x = _decide(bits_x, bx)
     gray_y, valid_y = _decide(bits_y, by)
@@ -322,9 +364,9 @@ def decode_gray_code_from_files(capture_files: list[str], pattern_meta: list[dic
     return proj_x.astype(np.float32), proj_y.astype(np.float32)
 
 def invert_cam_to_proj_lut(proj_x_of_cam: np.ndarray, proj_y_of_cam: np.ndarray, proj_w: int, proj_h: int) -> tuple[np.ndarray, np.ndarray]:
-    """Compute inverse LUT using bilinear splatting for smooth, dense maps.
-    For each camera pixel with decoded projector coords (px,py), we distribute the
-    camera coordinate (cx,cy) into the 4 neighboring projector pixels proportionally.
+    """Compute inverse LUT (projector→camera) by bilinear splatting.
+    proj_x_of_cam, proj_y_of_cam are per-camera-pixel projector coords in pixels.
+    Returns inv_x, inv_y of shape (proj_h, proj_w) with -1 for holes.
     """
     cam_h, cam_w = proj_x_of_cam.shape
 
@@ -340,14 +382,11 @@ def invert_cam_to_proj_lut(proj_x_of_cam: np.ndarray, proj_y_of_cam: np.ndarray,
         py = float(proj_y_of_cam[cy, cx])
         if not (0.0 <= px < proj_w and 0.0 <= py < proj_h):
             continue
-        x0 = int(np.floor(px))
-        y0 = int(np.floor(py))
-        dx = px - x0
-        dy = py - y0
+        x0 = int(np.floor(px)); y0 = int(np.floor(py))
+        dx = px - x0;           dy = py - y0
         for j in (0, 1):
             for i in (0, 1):
-                xi = x0 + i
-                yi = y0 + j
+                xi = x0 + i; yi = y0 + j
                 if 0 <= xi < proj_w and 0 <= yi < proj_h:
                     w = (1 - dx if i == 0 else dx) * (1 - dy if j == 0 else dy)
                     sum_x[yi, xi] += w * float(cx)
@@ -360,12 +399,9 @@ def invert_cam_to_proj_lut(proj_x_of_cam: np.ndarray, proj_y_of_cam: np.ndarray,
     inv_x[nonzero] = sum_x[nonzero] / wts[nonzero]
     inv_y[nonzero] = sum_y[nonzero] / wts[nonzero]
 
-    # Fill holes by nearest neighbor propagation
-    # Create a mask of holes
+    # Hole fill by nearest neighbor propagation
     holes = ~nonzero
     if holes.any():
-        # Find nearest valid (non-hole) pixel per hole using distance to zero pixels
-        # Input to DT must have zeros at valid pixels, non-zeros at holes
         _, labels = cv2.distanceTransformWithLabels(holes.astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
         for y in range(proj_h):
             for x in range(proj_w):
@@ -380,17 +416,189 @@ def invert_cam_to_proj_lut(proj_x_of_cam: np.ndarray, proj_y_of_cam: np.ndarray,
     return inv_x, inv_y
 
 def prewarp_with_inverse_lut(desired_camera_img_bgr: np.ndarray, inv_x: np.ndarray, inv_y: np.ndarray, proj_w: int, proj_h: int) -> np.ndarray:
-    """Create projector image that will appear as desired_camera_img when viewed by camera."""
-    # Build maps for cv2.remap: map_x gives source X in desired camera image for each projector pixel
+    """Create projector image that will appear as desired_camera_img when viewed by camera.
+    inv_x, inv_y: for each projector pixel (y,x), the corresponding camera (x,y) coordinate.
+    """
     map_x = inv_x.astype(np.float32)
     map_y = inv_y.astype(np.float32)
     cam_h, cam_w = desired_camera_img_bgr.shape[:2]
-    # Clamp mapping to valid camera coordinates to avoid remap sampling garbage
+    # Clamp to camera bounds
     np.clip(map_x, 0.0, float(cam_w - 1), out=map_x)
     np.clip(map_y, 0.0, float(cam_h - 1), out=map_y)
-    # Remap with linear interpolation
-    warped = cv2.remap(desired_camera_img_bgr, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0))
+    warped = cv2.remap(desired_camera_img_bgr, map_x, map_y,
+                       interpolation=cv2.INTER_LINEAR,
+                       borderMode=cv2.BORDER_CONSTANT,
+                       borderValue=(0, 0, 0))
     return warped
+
+def visualize_lut_quality(inv_x: np.ndarray, inv_y: np.ndarray, save_path: Optional[str] = None) -> np.ndarray:
+    """Generate a diagnostic image showing LUT quality and potential issues."""
+    proj_h, proj_w = inv_x.shape
+    
+    # Create diagnostic image with multiple panels
+    diag_img = np.zeros((proj_h * 2, proj_w * 2, 3), dtype=np.uint8)
+    
+    # Panel 1: X coordinate map (top-left)
+    x_norm = np.clip((inv_x - inv_x[inv_x >= 0].min()) / 
+                     (inv_x[inv_x >= 0].max() - inv_x[inv_x >= 0].min()), 0, 1)
+    x_vis = (x_norm * 255).astype(np.uint8)
+    diag_img[:proj_h, :proj_w, 0] = x_vis  # Red channel for X
+    
+    # Panel 2: Y coordinate map (top-right)
+    y_norm = np.clip((inv_y - inv_y[inv_y >= 0].min()) / 
+                     (inv_y[inv_y >= 0].max() - inv_y[inv_y >= 0].min()), 0, 1)
+    y_vis = (y_norm * 255).astype(np.uint8)
+    diag_img[:proj_h, proj_w:, 1] = y_vis  # Green channel for Y
+    
+    # Panel 3: Invalid regions (bottom-left)
+    invalid = ((inv_x < 0) | (inv_y < 0)).astype(np.uint8) * 255
+    diag_img[proj_h:, :proj_w] = np.stack([invalid, invalid, invalid], axis=-1)
+    
+    # Panel 4: Gradient magnitude showing discontinuities (bottom-right)
+    dx = np.gradient(inv_x, axis=1)
+    dy = np.gradient(inv_y, axis=0)
+    grad_mag = np.sqrt(dx**2 + dy**2)
+    grad_norm = np.clip(grad_mag / np.percentile(grad_mag[grad_mag > 0], 95), 0, 1)
+    grad_vis = (grad_norm * 255).astype(np.uint8)
+    diag_img[proj_h:, proj_w:, 2] = grad_vis  # Blue channel for gradients
+    
+    # Add text labels
+    cv2.putText(diag_img, "X Coords", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(diag_img, "Y Coords", (proj_w + 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(diag_img, "Invalid", (10, proj_h + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(diag_img, "Discontinuities", (proj_w + 10, proj_h + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    if save_path:
+        cv2.imwrite(save_path, diag_img)
+        print(f"LUT diagnostic image saved to {save_path}")
+    
+    return diag_img
+
+# ------------------------
+# Structured-Light (Phase-Shift Sinusoidal) for Subpixel
+# ------------------------
+
+def generate_phase_shift_patterns(
+    width: int,
+    height: int,
+    num_phases: int = 3,
+    cycles_x: int = 1,
+    cycles_y: int = 1,
+    gamma: float = 1.0,
+) -> list[dict]:
+    """Generate three-phase (or N-phase) sinusoidal patterns for X and Y axes.
+    Each entry: {"type":"phase", "axis":"x"|"y", "phase_idx":k, "image": np.ndarray BGR}
+    cycles_* specifies how many sinusoidal periods across that dimension (default 1).
+    """
+    assert num_phases >= 3, "num_phases must be >= 3"
+    patterns: list[dict] = []
+
+    def _mk(axis: str, cycles: int):
+        if axis == "x":
+            xs = (np.arange(width, dtype=np.float32)[None, :] / float(width))
+            base = 2.0 * np.pi * cycles * xs  # shape (1, W)
+            base = np.repeat(base, height, axis=0)  # (H, W)
+        else:
+            ys = (np.arange(height, dtype=np.float32)[:, None] / float(height))
+            base = 2.0 * np.pi * cycles * ys  # shape (H, 1)
+            base = np.repeat(base, width, axis=1)  # (H, W)
+
+        for k in range(num_phases):
+            phase_shift = 2.0 * np.pi * (k / float(num_phases))
+            # Raw sinusoid in [0,1]
+            s = 0.5 + 0.5 * np.cos(base + phase_shift)
+            if gamma and abs(gamma - 1.0) > 1e-6:
+                s = np.clip(s, 0.0, 1.0) ** (1.0 / float(gamma))
+            img = (np.clip(s * 255.0, 0.0, 255.0)).astype(np.uint8)
+            img3 = np.repeat(img[:, :, None], 3, axis=2)
+            patterns.append({"type": "phase", "axis": axis, "phase_idx": k, "image": img3})
+
+    _mk("x", cycles_x)
+    _mk("y", cycles_y)
+    return patterns
+
+def decode_phase_shift_from_files(
+    capture_files: list[str],
+    pattern_meta: list[dict],
+    cam_h: int,
+    cam_w: int,
+    proj_w: int,
+    proj_h: int,
+    num_phases: int = 3,
+    amp_thresh: float = 10.0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Decode N-phase shifted sinusoidal captures to continuous projector coords.
+    Returns (proj_x_of_cam [H,W], proj_y_of_cam [H,W], amp_x [H,W], amp_y [H,W])
+    Values are float32; invalid where amplitude below threshold will be set to -1.
+    Assumes cycles_x=cycles_y=1 in generation, i.e., phase spans one full 2π over width/height.
+    """
+    # Load all captures grayscale
+    caps: list[np.ndarray] = []
+    for fp in capture_files:
+        img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            img = np.zeros((cam_h, cam_w), dtype=np.uint8)
+        caps.append(img.astype(np.float32))
+
+    # Split by axis and sort by phase_idx
+    xs = [(cap, meta) for cap, meta in zip(caps, pattern_meta) if meta.get("type") == "phase" and meta.get("axis") == "x"]
+    ys = [(cap, meta) for cap, meta in zip(caps, pattern_meta) if meta.get("type") == "phase" and meta.get("axis") == "y"]
+
+    def _phase_decode(seq: list[tuple[np.ndarray, dict]], length: int) -> tuple[np.ndarray, np.ndarray]:
+        if not seq:
+            return np.full((cam_h, cam_w), -1.0, np.float32), np.zeros((cam_h, cam_w), np.float32)
+        try:
+            seq_sorted = sorted(seq, key=lambda t: int(t[1].get("phase_idx", 0)))
+        except Exception:
+            seq_sorted = seq
+        # Use first N frames (N-step) for better accuracy
+        frames = [seq_sorted[i][0] for i in range(min(len(seq_sorted), num_phases))]
+        if len(frames) < 3:
+            # Not enough frames; cannot decode
+            return np.full((cam_h, cam_w), -1.0, np.float32), np.zeros((cam_h, cam_w), np.float32)
+        
+        # Apply median filter to reduce noise in captured images
+        frames = [cv2.medianBlur(f.astype(np.uint8), 3).astype(np.float32) for f in frames]
+        
+        if num_phases == 3:
+            I1, I2, I3 = frames[0], frames[1], frames[2]
+            # Three-step phase-shift decoding with improved formula
+            # phi in [-pi, pi]
+            num = np.sqrt(3.0) * (I1 - I3)
+            den = (2.0 * I2 - I1 - I3) + 1e-6  # Add small epsilon to avoid division by zero
+            phi = np.arctan2(num, den)
+            # Better amplitude calculation
+            amp = np.sqrt(num**2 + den**2) / 2.0
+        elif num_phases == 4:
+            # Four-step phase-shift for better accuracy
+            I1, I2, I3, I4 = frames[0], frames[1], frames[2], frames[3]
+            num = I4 - I2
+            den = I1 - I3 + 1e-6
+            phi = np.arctan2(num, den)
+            # Better amplitude for 4-step
+            amp = 0.5 * np.sqrt(num**2 + den**2)
+        else:
+            # General N-step formula
+            I1, I2, I3 = frames[0], frames[1], frames[2]
+            num = np.sqrt(3.0) * (I1 - I3)
+            den = (2.0 * I2 - I1 - I3) + 1e-6
+            phi = np.arctan2(num, den)
+            amp = np.sqrt(num**2 + den**2) / 2.0
+        
+        # Apply Gaussian smoothing to phase for better continuity
+        phi_smooth = cv2.GaussianBlur(phi, (5, 5), 1.0)
+        
+        # Map to [0, 2pi)
+        phi_mod = (phi_smooth + 2.0 * np.pi) % (2.0 * np.pi)
+        # Convert to absolute projector coordinate (cycles=1)
+        coords = (length * (phi_mod / (2.0 * np.pi))).astype(np.float32)
+        # Invalidate low-amplitude pixels
+        coords[amp < float(amp_thresh)] = -1.0
+        return coords.astype(np.float32), amp.astype(np.float32)
+
+    proj_x_phase, amp_x = _phase_decode(xs, proj_w)
+    proj_y_phase, amp_y = _phase_decode(ys, proj_h)
+    return proj_x_phase, proj_y_phase, amp_x, amp_y
 
 
 

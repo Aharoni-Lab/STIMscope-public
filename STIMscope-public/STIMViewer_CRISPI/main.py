@@ -94,7 +94,7 @@ import camera
 def start(camera_device: camera.Camera, ui: 'Interface') -> bool:
     try:
         try:
-            camera_device.start(start_rt=True)   
+            camera_device.start(start_rt=True)
         except Exception as e:
             print(f"Failed to start camera: {e}")
             return False

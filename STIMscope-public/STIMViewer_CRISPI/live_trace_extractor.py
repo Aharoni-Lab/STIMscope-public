@@ -233,7 +233,7 @@ class LiveTraceExtractor(QObject):
         camera,
         label_path,
         plot_widget=None,
-        max_points: int = 150,
+        max_points: int = 300,
         max_rois: int = 6,
         use_pygame_plot: bool = False,
         enable_sync: bool = False,
@@ -249,6 +249,14 @@ class LiveTraceExtractor(QObject):
         self.plot_widget = None
         self._plot_curves = {}
         self._plot_timer = None
+        self._x_mode_seconds = False  # False=frames, True=seconds
+        self._last_fps_est = 30.0
+        self._global_frame_index = 0  # monotonically increasing sample index for x-axis
+        self._oasis_enabled = False
+        self._oasis_gamma = 0.95  # default decay; can be tuned
+        self._oasis_lambda = 0.0  # default sparsity; 0 -> ML
+        self._oasis_prev_c: Dict[int, float] = {}
+        self._oasis_prev_s: Dict[int, float] = {}
         self._labels_gpu = None
 
         self._frame_count = 0
@@ -330,6 +338,20 @@ class LiveTraceExtractor(QObject):
         self._update_sync_state(SyncState.INITIALIZING)
         print("🚀 LiveTraceExtractor initialized")
 
+    def set_oasis_enabled(self, enabled: bool, gamma: float = None, lam: float = None):
+        try:
+            self._oasis_enabled = bool(enabled)
+            if gamma is not None:
+                self._oasis_gamma = float(gamma)
+            if lam is not None:
+                self._oasis_lambda = float(lam)
+            if not self._oasis_enabled:
+                self._oasis_prev_c.clear()
+                self._oasis_prev_s.clear()
+            print(f"[OASIS] enabled={self._oasis_enabled} gamma={self._oasis_gamma} lambda={self._oasis_lambda}")
+        except Exception as e:
+            print(f"[OASIS] set failed: {e}")
+
 
 
     def _init_roi_processing(self, label_path: str, max_rois: int, max_points: int):
@@ -384,6 +406,7 @@ class LiveTraceExtractor(QObject):
         
 
         camera_fps = self._detect_camera_fps()
+        self._last_fps_est = camera_fps
         plot_interval_ms = int(1000 / camera_fps)
         
         self._plot_timer.setInterval(plot_interval_ms)
@@ -853,6 +876,7 @@ class LiveTraceExtractor(QObject):
                         
                         self.stats['frames_processed'] += 1
                         self.stats['last_frame_time'] = time.time()
+                        self._global_frame_index += 1
                         return
             else:
 
@@ -900,7 +924,20 @@ class LiveTraceExtractor(QObject):
                             print(f"   ✅ Created buffer for ROI {missing_key}")
                 
                 try:
-                    self.buffers[rid_key].append(float(val))
+                    v = float(val)
+                    # Optional online OASIS-style deconvolution (AR(1) with non-negativity)
+                    if self._oasis_enabled:
+                        c_prev = self._oasis_prev_c.get(rid_key, 0.0)
+                        # Online OASIS (AR(1)) one-step update:
+                        # s_t = max(0, y_t - gamma * c_{t-1} - lambda)
+                        # c_t = gamma * c_{t-1} + s_t
+                        s_t = float(v) - (self._oasis_gamma * c_prev) - float(self._oasis_lambda)
+                        if s_t < 0.0:
+                            s_t = 0.0
+                        c_t = (self._oasis_gamma * c_prev) + s_t
+                        self._oasis_prev_c[rid_key] = c_t
+                        v = float(s_t)
+                    self.buffers[rid_key].append(v)
                 except KeyError as e:
                     print(f"❌ Still missing buffer for ROI {rid_key}: {e}")
 
@@ -914,6 +951,7 @@ class LiveTraceExtractor(QObject):
 
             self.stats['frames_processed'] += 1
             self.stats['last_frame_time'] = time.time()
+            self._global_frame_index += 1
 
         except Exception as e:
             self.stats['frames_failed'] += 1
@@ -1119,10 +1157,13 @@ class LiveTraceExtractor(QObject):
                 print(f"🔄 Curve validation: {len(valid_curves)} valid curves retained")
             
 
+            max_len = 0
             for i, roi_id in enumerate(page_rois):
                 buffer = self.buffers.get(roi_id, [])
                 if len(buffer) < 2:
                     continue
+                if len(buffer) > max_len:
+                    max_len = len(buffer)
                 
                 try:
                     if roi_id not in self._plot_curves or not hasattr(self._plot_curves[roi_id], 'setData'):
@@ -1132,8 +1173,13 @@ class LiveTraceExtractor(QObject):
                             self._plot_curves[roi_id] = self.plot_widget.plot(pen=pen)
                         else:
                             continue
-                    
-                    x_data = np.arange(len(buffer), dtype=np.float32)
+                    # Build x axis using global index; do not reset
+                    start_idx = max(0, self._global_frame_index - len(buffer))
+                    if getattr(self, '_x_mode_seconds', False):
+                        x_data = (np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
+                                  / max(1e-6, getattr(self, '_last_fps_est', 30.0)))
+                    else:
+                        x_data = np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
                     y_data = np.array(list(buffer), dtype=np.float32)
                     self._plot_curves[roi_id].setData(x=x_data, y=y_data)
                     
@@ -1158,7 +1204,30 @@ class LiveTraceExtractor(QObject):
             self._update_legend_for_page(page_rois)
             
 
-            self.plot_widget.autoRange()
+            # Update labels and dynamic x range
+            try:
+                if hasattr(self.plot_widget, 'setLabel'):
+                    self.plot_widget.setLabel('left', 'Intensity')
+                    self.plot_widget.setLabel('bottom', 'Time (frames)' if not getattr(self, '_x_mode_seconds', False) else 'Time (s)')
+            except Exception:
+                pass
+
+            if max_len > 1:
+                # Show last window but keep axis in global coordinates
+                x1 = self._global_frame_index
+                x0 = max(0, x1 - self._max_points_cfg)
+                if getattr(self, '_x_mode_seconds', False):
+                    t0 = x0 / max(1e-6, getattr(self, '_last_fps_est', 30.0))
+                    t1 = x1 / max(1e-6, getattr(self, '_last_fps_est', 30.0))
+                    try:
+                        self.plot_widget.setXRange(t0, t1, padding=0.02)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        self.plot_widget.setXRange(x0, x1, padding=0.02)
+                    except Exception:
+                        pass
             
 
             self._update_expanded_plot()
@@ -1391,7 +1460,13 @@ class LiveTraceExtractor(QObject):
                     buffer = list(self.buffers[roi_id])
                     if len(buffer) >= 2:
                         try:
-                            x_data = np.arange(len(buffer), dtype=np.float32)
+                            # Use global frame index; do not reset x
+                            start_idx = max(0, self._global_frame_index - len(buffer))
+                            if getattr(self, '_x_mode_seconds', False):
+                                x_data = (np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
+                                          / max(1e-6, getattr(self, '_last_fps_est', 30.0)))
+                            else:
+                                x_data = np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
                             y_data = np.array(buffer, dtype=np.float32)
                             curve.setData(x=x_data, y=y_data, skipFiniteCheck=True)
                         except Exception:
@@ -1403,8 +1478,18 @@ class LiveTraceExtractor(QObject):
             else:
                 self._expand_update_count = 0
             
-            if self._expand_update_count % 30 == 0:  
-                self._expanded_plot.autoRange()
+            # Scroll last window but keep global time/index on x-axis
+            try:
+                x1 = self._global_frame_index
+                x0 = max(0, x1 - self._max_points_cfg)
+                if getattr(self, '_x_mode_seconds', False):
+                    t0 = x0 / max(1e-6, getattr(self, '_last_fps_est', 30.0))
+                    t1 = x1 / max(1e-6, getattr(self, '_last_fps_est', 30.0))
+                    self._expanded_plot.setXRange(t0, t1, padding=0.02)
+                else:
+                    self._expanded_plot.setXRange(x0, x1, padding=0.02)
+            except Exception:
+                pass
                 
         except Exception as e:
 

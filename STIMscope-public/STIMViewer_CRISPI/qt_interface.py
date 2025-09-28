@@ -68,7 +68,10 @@ class Interface(QtWidgets.QMainWindow):
         self.gpu_ui = None
         
         self.gui_init()
-       
+        
+        # Update exposure text box to show default value
+        if hasattr(self, '_exp_line'):
+            self._exp_line.setText("33333.333")
         
         self._qt_instance.aboutToQuit.connect(self._close)
         try:
@@ -221,10 +224,10 @@ class Interface(QtWidgets.QMainWindow):
             self._toggle_overlay(self._button_toggle_overlay.isChecked())
         except Exception:
             pass
-        self._proj_warp_mode = "H"  # "H" or "LUT"
+        self._proj_warp_mode = "NONE"  # default: no warp until user selects
         self._button_req_hmatrix = QtWidgets.QPushButton("REQ H-Matrix")
         self._button_req_hmatrix.setCheckable(True)
-        self._button_req_hmatrix.setChecked(True)
+        self._button_req_hmatrix.setChecked(False)
         self._button_req_hmatrix.toggled.connect(self._on_warp_h_toggled)
         self._button_use_lut = QtWidgets.QPushButton("REQ LUT")
         self._button_use_lut.setCheckable(True)
@@ -234,7 +237,7 @@ class Interface(QtWidgets.QMainWindow):
         self._mask_pattern_label = QtWidgets.QLabel("Mask Pattern")
         self._mask_pattern_dropdown = QtWidgets.QComboBox()
         self._mask_pattern_dropdown.addItems([
-            "Moving Bar", "Checkerboard", "Solid", "Circle", "Gradient", "Image", "Folder", "Custom Python"
+            "Seg Mask", "Moving Bar", "Checkerboard", "Solid", "Circle", "Gradient", "Image", "Folder", "Custom"
         ])
         self._mask_pattern_dropdown.currentTextChanged.connect(self._on_mask_pattern_changed)
         self._mask_pattern_browse = QtWidgets.QPushButton("Browse…")
@@ -375,7 +378,7 @@ class Interface(QtWidgets.QMainWindow):
             _set_compact_width_to_text(self._button_sl_calibrate, 28)
         except Exception:
             pass
-        self._button_sl_project_reg = QtWidgets.QPushButton("Project LUT-Warped Registration")
+        self._button_sl_project_reg = QtWidgets.QPushButton("Project LUT-Warped")
         self._button_sl_project_reg.clicked.connect(self._sl_project_registration)
         try:
             self._button_sl_project_reg.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -470,6 +473,14 @@ class Interface(QtWidgets.QMainWindow):
         row0_layout.addWidget(self._button_start_hardware_acquisition)
         row0_layout.addWidget(self._button_calibrate)
         row0_layout.addWidget(self._button_sl_calibrate)
+        # Toggle for enabling subpixel phase refinement
+        try:
+            self._chk_phase_refine = QtWidgets.QCheckBox("Subpixel")
+            self._chk_phase_refine.setChecked(False)
+            self._chk_phase_refine.setToolTip("Enable sinusoidal phase refinement for subpixel LUT. If results degrade, uncheck.")
+            row0_layout.addWidget(self._chk_phase_refine)
+        except Exception:
+            pass
         row0_layout.addWidget(self._button_sl_project_reg)
         row0_widget = QtWidgets.QWidget()
         row0_widget.setLayout(row0_layout)
@@ -488,6 +499,11 @@ class Interface(QtWidgets.QMainWindow):
         
         # New Row 2: mask pattern selection and send controls
         row2_layout = QtWidgets.QHBoxLayout()
+        try:
+            row2_layout.setSpacing(2)  # tighter gap between label and dropdown
+            row2_layout.setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
         # Hardware trigger out toggle (left side of Mask Pattern)
         self._button_hw_trig = QtWidgets.QPushButton("HW Trigger Out")
         self._button_hw_trig.setCheckable(True)
@@ -498,8 +514,29 @@ class Interface(QtWidgets.QMainWindow):
             pass
         self._button_hw_trig.toggled.connect(self._toggle_hw_trigger_out)
         row2_layout.addWidget(self._button_hw_trig)
-        row2_layout.addWidget(self._mask_pattern_label)
-        row2_layout.addWidget(self._mask_pattern_dropdown)
+        try:
+            self._mask_pattern_label.setContentsMargins(0, 0, 0, 0)
+            self._mask_pattern_label.setStyleSheet("margin:0px; padding-right:2px;")
+        except Exception:
+            pass
+        # Tight pair: label + dropdown with zero spacing
+        try:
+            mp_pair_widget = QtWidgets.QWidget()
+            mp_pair_layout = QtWidgets.QHBoxLayout(mp_pair_widget)
+            mp_pair_layout.setContentsMargins(0, 0, 0, 0)
+            mp_pair_layout.setSpacing(0)
+            try:
+                self._mask_pattern_label.setContentsMargins(0, 0, 0, 0)
+                self._mask_pattern_label.setStyleSheet("margin:0px; padding-right:1px;")
+            except Exception:
+                pass
+            mp_pair_layout.addWidget(self._mask_pattern_label)
+            mp_pair_layout.addWidget(self._mask_pattern_dropdown)
+            row2_layout.addWidget(mp_pair_widget)
+        except Exception:
+            # Fallback: add directly
+            row2_layout.addWidget(self._mask_pattern_label)
+            row2_layout.addWidget(self._mask_pattern_dropdown)
         row2_layout.addWidget(self._mask_pattern_browse)
         # Shift buttons left: replace stretch with a small spacing
         row2_layout.addSpacing(8)
@@ -517,14 +554,6 @@ class Interface(QtWidgets.QMainWindow):
         project_buttons_layout.addWidget(self._project_intensity_label)
         project_buttons_layout.addWidget(self._project_intensity_slider)
         project_buttons_layout.addWidget(self._project_intensity_value_label)
-        # Troubleshooting button
-        self._button_troubleshoot = QtWidgets.QPushButton("Troubleshooting")
-        try:
-            self._button_troubleshoot.setToolTip("Open troubleshooting tools: GPIO test, engine/camera status, performance graphs")
-        except Exception:
-            pass
-        self._button_troubleshoot.clicked.connect(self._open_troubleshoot_window)
-        project_buttons_layout.addWidget(self._button_troubleshoot)
         project_buttons_layout.addStretch()
         project_buttons_widget = QtWidgets.QWidget()
         project_buttons_widget.setLayout(project_buttons_layout)
@@ -601,22 +630,44 @@ class Interface(QtWidgets.QMainWindow):
 
         self._gain_label.setAlignment(Qt.AlignCenter)
         self._gain_slider.setFixedWidth(15)  # Make narrower
-        control_group_layout.addWidget(self._gain_label, 0, 0)
-        control_group_layout.addWidget(self._gain_slider, 1, 0)
+        # Removed from panel; accessible via Sensor Settings window
         self._gain_value_label = QtWidgets.QLabel("1.00")
         self._gain_value_label.setAlignment(Qt.AlignCenter)
         self._gain_value_label.setStyleSheet("font-size: 10px;")
-        control_group_layout.addWidget(self._gain_value_label, 2, 0)
+        # not added to layout
 
 
         self._dgain_label.setAlignment(Qt.AlignCenter)
         self._dgain_slider.setFixedWidth(15)  # Make narrower
-        control_group_layout.addWidget(self._dgain_label, 0, 1)
-        control_group_layout.addWidget(self._dgain_slider, 1, 1)
+        # Removed from panel; accessible via Sensor Settings window
         self._dgain_value_label = QtWidgets.QLabel("1.00")
         self._dgain_value_label.setAlignment(Qt.AlignCenter)
         self._dgain_value_label.setStyleSheet("font-size: 10px;")
-        control_group_layout.addWidget(self._dgain_value_label, 2, 1)
+        # not added to layout
+
+        # Exposure entry (µs)
+        self._exp_label = QtWidgets.QLabel("EXP (µs)")
+        self._exp_label.setAlignment(Qt.AlignCenter)
+        # Removed from panel; accessible via Sensor Settings window
+        self._exp_line = QtWidgets.QLineEdit("33333.333")
+        self._exp_line.setAlignment(Qt.AlignCenter)
+        self._exp_line.setValidator(QtGui.QDoubleValidator(1.0, 1e9, 3))
+        self._exp_line.editingFinished.connect(self._apply_exposure_from_text)
+        # not added to layout
+
+        # Buttons row (horizontal)
+        btn_row = QtWidgets.QHBoxLayout()
+        self._button_sensor_settings = QtWidgets.QPushButton("Sensor Settings")
+        self._button_sensor_settings.clicked.connect(self._open_sensor_settings)
+        btn_row.addWidget(self._button_sensor_settings)
+        self._button_troubleshoot = QtWidgets.QPushButton("Troubleshooting")
+        try:
+            self._button_troubleshoot.setToolTip("Open troubleshooting tools: GPIO test, engine/camera status, performance graphs")
+        except Exception:
+            pass
+        self._button_troubleshoot.clicked.connect(self._open_troubleshoot_window)
+        btn_row.addWidget(self._button_troubleshoot)
+        control_group_layout.addLayout(btn_row, 5, 0, 1, 2)
 
 
         # Zoom controls removed - using mouse wheel zoom instead
@@ -624,10 +675,9 @@ class Interface(QtWidgets.QMainWindow):
 
         # Set control panel widths for larger buttons
         control_group.setSizePolicy(
-            QtWidgets.QSizePolicy.Fixed,
-            QtWidgets.QSizePolicy.Preferred
+            QtWidgets.QSizePolicy.Preferred,
+            QtWidgets.QSizePolicy.Fixed
         )
-        control_group.setFixedWidth(100)  # Sliders panel
         
         for grp in (config_group, capture_group):
             grp.setSizePolicy(
@@ -645,7 +695,8 @@ class Interface(QtWidgets.QMainWindow):
         # Shift everything to the left to align with video preview
         button_bar_layout.addWidget(config_group, 0, 0, 4, 1)       # Column 0 (leftmost)
         button_bar_layout.addWidget(capture_group, 4, 0, 2, 1)      # Column 0, below config
-        button_bar_layout.addWidget(control_group, 0, 1, 7, 1)      # Column 1 (next to config/capture)
+        # Keep control panel as a separate panel below the left column panels
+        button_bar_layout.addWidget(control_group,                  6, 0, 1, 1, Qt.AlignLeft)
         
         # Add spacer to push everything to the left
         spacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -663,6 +714,11 @@ class Interface(QtWidgets.QMainWindow):
 
         self._gain_label.setToolTip("Adjust the analog gain level (brightness).")
         self._dgain_label.setToolTip("Adjust the digital gain level.")
+        try:
+            self._exp_label.setToolTip("Exposure in microseconds. Default 33333.333 (≈30 FPS).")
+            self._exp_line.setToolTip("Type exposure in µs and press Enter.")
+        except Exception:
+            pass
         # Zoom tooltip removed - using mouse wheel zoom instead
 
 
@@ -726,7 +782,7 @@ class Interface(QtWidgets.QMainWindow):
 
     def _on_mask_pattern_changed(self, text: str):
         # Enable browse button only for patterns that need a path
-        need_path = text in ("Image", "Folder", "Custom Python")
+        need_path = text in ("Image", "Folder", "Custom")
         try:
             self._mask_pattern_browse.setEnabled(need_path)
         except Exception:
@@ -745,9 +801,10 @@ class Interface(QtWidgets.QMainWindow):
                 dirp = QFileDialog.getExistingDirectory(self, "Select Folder", str(Path.home()))
                 if dirp:
                     self._mask_pattern_path = dirp
-            elif typ == "Custom Python":
-                fp, _ = QFileDialog.getOpenFileName(self, "Select Python Script", str(Path.home()),
-                                                    "Python (*.py)")
+            elif typ == "Custom":
+                # Allow selecting either a Python sender or a compiled custom sender (including no extension)
+                fp, _ = QFileDialog.getOpenFileName(self, "Select Sender (Python or Executable)", str(Path.home()),
+                                                    "All Files (*)")
                 if fp:
                     self._mask_pattern_path = fp
         except Exception as e:
@@ -851,8 +908,8 @@ class Interface(QtWidgets.QMainWindow):
     # ---------------- Troubleshooting Window ----------------
     def _open_troubleshoot_window(self):
         try:
-            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout
-            import psutil, os
+            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout, QWidget, QMessageBox
+            import psutil, os, cv2, numpy as _np
         except Exception as e:
             print(f"Troubleshooting UI error: {e}")
             return
@@ -895,15 +952,21 @@ class Interface(QtWidgets.QMainWindow):
         grid = QGridLayout()
         if _HAS_PG:
             pg.setConfigOptions(antialias=True)
-            cpu_plot = pg.PlotWidget()
-            cpu_plot.setTitle("CPU %")
-            cpu_curve = cpu_plot.plot(pen=pg.mkPen('#2ecc71', width=2))
-            mem_plot = pg.PlotWidget()
-            mem_plot.setTitle("Mem %")
-            mem_curve = mem_plot.plot(pen=pg.mkPen('#3498db', width=2))
-            gpu_plot = pg.PlotWidget()
-            gpu_plot.setTitle("GPU %")
-            gpu_curve = gpu_plot.plot(pen=pg.mkPen('#9b59b6', width=2))
+            def _small_plot(title, pen_color):
+                w = pg.PlotWidget()
+                w.setTitle(title)
+                w.setMinimumSize(160, 100)
+                w.setMaximumHeight(110)
+                c = w.plot(pen=pg.mkPen(pen_color, width=2))
+                w.getPlotItem().hideButtons()
+                w.getPlotItem().setLabel('bottom', '')
+                w.getPlotItem().setLabel('left', '')
+                w.getPlotItem().getAxis('left').setStyle(showValues=False)
+                w.getPlotItem().getAxis('bottom').setStyle(showValues=False)
+                return w, c
+            cpu_plot, cpu_curve = _small_plot("CPU %", '#2ecc71')
+            mem_plot, mem_curve = _small_plot("Mem %", '#3498db')
+            gpu_plot, gpu_curve = _small_plot("GPU %", '#9b59b6')
             grid.addWidget(cpu_plot, 0, 0)
             grid.addWidget(mem_plot, 0, 1)
             grid.addWidget(gpu_plot, 0, 2)
@@ -915,6 +978,493 @@ class Interface(QtWidgets.QMainWindow):
             grid.addWidget(lbl_mem, 0, 1)
             grid.addWidget(lbl_gpu, 0, 2)
         lay.addLayout(grid)
+
+        # ---------------- Structured-Light Validation ----------------
+        def _load_luts():
+            asset_dir = getattr(self._camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+            xfp = os.path.join(asset_dir, "cam_from_proj_x.npy")
+            yfp = os.path.join(asset_dir, "cam_from_proj_y.npy")
+            if not (os.path.isfile(xfp) and os.path.isfile(yfp)):
+                QMessageBox.warning(dlg, "LUTs Missing", "cam_from_proj_{x,y}.npy not found. Run Structured-Light calibration first.")
+                return None, None, asset_dir
+            try:
+                inv_x = _np.load(xfp).astype(_np.float32)
+                inv_y = _np.load(yfp).astype(_np.float32)
+                return inv_x, inv_y, asset_dir
+            except Exception as e:
+                QMessageBox.critical(dlg, "LUT Load Error", str(e))
+                return None, None, asset_dir
+
+        from PyQt5.QtWidgets import QGridLayout as _QGrid
+        sl_row = _QGrid()
+        sl_title = QLabel("Structured-Light Validation:")
+        try: sl_title.setStyleSheet("font-weight:600;")
+        except Exception: pass
+        lay.addWidget(sl_title)
+
+        btn_diag = QPushButton("LUT Diagnostics")
+        btn_proj = QPushButton("Project Grid (LUT)")
+        btn_eval = QPushButton("Capture + Evaluate")
+        btn_rterr = QPushButton("Round-Trip Error (Maps)")
+        btn_probe = QPushButton("Pixel Probe (1px)")
+        btn_dots  = QPushButton("Dot Array Test")
+        btn_rtphy = QPushButton("Round-Trip (Physical)")
+        btn_edge  = QPushButton("Edge Strip Test")
+        # arrange buttons in two rows
+        btns = [btn_diag, btn_proj, btn_eval, btn_rterr, btn_probe, btn_dots, btn_rtphy, btn_edge]
+        for i, b in enumerate(btns):
+            r = i // 4
+            c = i % 4
+            sl_row.addWidget(b, r, c)
+        lay.addLayout(sl_row)
+
+        # Zoomable preview
+        from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+        sl_scene = QGraphicsScene()
+        sl_view = QGraphicsView(sl_scene)
+        sl_view.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, on=True)
+        sl_view.setDragMode(QGraphicsView.ScrollHandDrag)
+        sl_view.setMinimumSize(360, 220)
+        sl_view.setStyleSheet("border:1px solid #d1d1d6;")
+        sl_pix = QGraphicsPixmapItem()
+        sl_scene.addItem(sl_pix)
+        lay.addWidget(sl_view)
+
+        def _to_pix(img_bgr):
+            try:
+                rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            except Exception:
+                rgb = img_bgr
+            h, w = rgb.shape[:2]
+            from PyQt5.QtGui import QImage, QPixmap
+            qimg = QImage(rgb.data, w, h, rgb.strides[0], QImage.Format_RGB888)
+            return QPixmap.fromImage(qimg.copy())
+
+        def _on_lut_diag():
+            try:
+                from calibration import visualize_lut_quality as _viz
+            except Exception:
+                _viz = None
+            inv_x, inv_y, asset_dir = _load_luts()
+            if inv_x is None or _viz is None:
+                return
+            diag = _viz(inv_x, inv_y, os.path.join(asset_dir, "lut_diagnostics.png"))
+            try:
+                pm = _to_pix(diag)
+                sl_pix.setPixmap(pm)
+                sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+            except Exception:
+                pass
+
+        def _infer_cam_size():
+            try:
+                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                names = sorted([p for p in os.listdir(save_dir) if p.endswith('.png')])
+                for nm in reversed(names):
+                    fp = os.path.join(save_dir, nm)
+                    img = cv2.imread(fp, cv2.IMREAD_GRAYSCALE)
+                    if img is not None:
+                        return img.shape[1], img.shape[0]
+            except Exception:
+                pass
+            try:
+                return int(self._camera.sensor_width), int(self._camera.sensor_height)
+            except Exception:
+                return 1920, 1080
+
+        def _make_cam_grid(cam_w, cam_h, cell=32):
+            g = _np.zeros((cam_h, cam_w), _np.uint8)
+            for y in range(0, cam_h, cell):
+                for x in range(0, cam_w, cell):
+                    if ((x//cell)+(y//cell)) & 1:
+                        g[y:y+cell, x:x+cell] = 255
+            return g
+
+        def _on_project_grid():
+            try:
+                from calibration import prewarp_with_inverse_lut as _prewarp
+            except Exception:
+                _prewarp = None
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None or _prewarp is None:
+                return
+            cam_w, cam_h = _infer_cam_size()
+            grid = _make_cam_grid(cam_w, cam_h)
+            proj_h, proj_w = inv_x.shape
+            warped = _prewarp(cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
+            # Prefer sending to the projection engine to avoid GL/X context conflicts
+            use_engine = hasattr(self, '_proc_projector') and (self._proc_projector is not None)
+            if use_engine:
+                try:
+                    # Clear H so prewarped content is not warped again
+                    import zmq as _zmq
+                    _ctx = _zmq.Context.instance(); _s = _ctx.socket(_zmq.REQ)
+                    _s.setsockopt(_zmq.LINGER, 0)
+                    _s.connect("tcp://127.0.0.1:5560"); _s.send(b"IDENTITY"); _ = _s.recv(); _s.close()
+                except Exception:
+                    pass
+                try:
+                    from projector_client import ProjectorClient
+                    client = ProjectorClient()
+                    # Engine expects 1920x1080 luminance; client will resize.
+                    client.send_gray(warped, frame_id=7777, visible_id=0, immediate=True)
+                    client.close()
+                    return
+                except Exception:
+                    pass
+            # Fallback: draw via Qt projector window
+            try:
+                self.projection.show_image_raw_no_warp_no_flip(warped)
+            except Exception:
+                self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+
+        def _on_capture_evaluate():
+            try:
+                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                os.makedirs(save_dir, exist_ok=True)
+                cap_path = os.path.join(save_dir, "sl_validation_cap.png")
+                self._camera.snapshot(cap_path)
+                cap = cv2.imread(cap_path, cv2.IMREAD_GRAYSCALE)
+                if cap is None:
+                    QMessageBox.warning(dlg, "Capture Failed", "Could not read snapshot.")
+                    return
+                cam_w, cam_h = cap.shape[1], cap.shape[0]
+                grid = _make_cam_grid(cam_w, cam_h)
+                diff = (cap.astype(_np.float32) - grid.astype(_np.float32))
+                mse = float(_np.mean(diff*diff))
+                if mse <= 1e-9:
+                    psnr = 99.0
+                else:
+                    psnr = 10.0 * _np.log10((255.0*255.0)/mse)
+                QMessageBox.information(dlg, "Grid Evaluation", f"MSE: {mse:.1f}\nPSNR: {psnr:.2f} dB")
+            except Exception as e:
+                QMessageBox.warning(dlg, "Evaluation Error", str(e))
+
+        def _on_round_trip():
+            try:
+                asset_dir = getattr(self._camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+                fpx = os.path.join(asset_dir, "proj_from_cam_x.npy")
+                fpy = os.path.join(asset_dir, "proj_from_cam_y.npy")
+                inv_x, inv_y, _ = _load_luts()
+                if inv_x is None or (not (os.path.isfile(fpx) and os.path.isfile(fpy))):
+                    QMessageBox.warning(dlg, "Missing Maps", "Need proj_from_cam and cam_from_proj maps.")
+                    return
+                fx = _np.load(fpx).astype(_np.float32); fy = _np.load(fpy).astype(_np.float32)
+                cam_h, cam_w = fx.shape
+                step = max(4, min(cam_w, cam_h)//200)
+                ys = _np.arange(0, cam_h, step, dtype=_np.int32)
+                xs = _np.arange(0, cam_w, step, dtype=_np.int32)
+                yy, xx = _np.meshgrid(ys, xs, indexing='ij')
+                px = fx[yy, xx]; py = fy[yy, xx]
+                ph, pw = inv_x.shape
+                x0 = _np.floor(px).astype(_np.int32); y0 = _np.floor(py).astype(_np.int32)
+                dx = px - x0; dy = py - y0
+                x1 = _np.clip(x0+1, 0, pw-1); y1 = _np.clip(y0+1, 0, ph-1)
+                def _bil(inmap):
+                    v00 = inmap[_np.clip(y0,0,ph-1), _np.clip(x0,0,pw-1)]
+                    v10 = inmap[y0, x1]; v01 = inmap[y1, x0]; v11 = inmap[y1, x1]
+                    return (1-dx)*(1-dy)*v00 + dx*(1-dy)*v10 + (1-dx)*dy*v01 + dx*dy*v11
+                rx = _bil(inv_x); ry = _bil(inv_y)
+                err = _np.sqrt((_np.maximum(0, rx) - xx.astype(_np.float32))**2 + (_np.maximum(0, ry) - yy.astype(_np.float32))**2)
+                mean_err = float(_np.mean(err[_np.isfinite(err)]))
+                p95_err = float(_np.percentile(err[_np.isfinite(err)], 95))
+                QMessageBox.information(dlg, "Round-Trip Error", f"Mean error: {mean_err:.2f} px\n95th %: {p95_err:.2f} px")
+            except Exception as e:
+                QMessageBox.warning(dlg, "Round-Trip Error", str(e))
+
+        btn_diag.clicked.connect(_on_lut_diag)
+        btn_proj.clicked.connect(_on_project_grid)
+        btn_eval.clicked.connect(_on_capture_evaluate)
+        btn_rterr.clicked.connect(_on_round_trip)
+
+        def _send_to_engine_gray(img_gray):
+            try:
+                from projector_client import ProjectorClient
+                client = ProjectorClient()
+                client.send_gray(img_gray, frame_id=8888, visible_id=0, immediate=True)
+                client.close()
+                return True
+            except Exception:
+                return False
+
+        def _capture_gray():
+            save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+            os.makedirs(save_dir, exist_ok=True)
+            cap_path = os.path.join(save_dir, "sl_validation_cap.png")
+            self._camera.snapshot(cap_path)
+            return cv2.imread(cap_path, cv2.IMREAD_GRAYSCALE)
+
+        def _on_pixel_probe():
+            # Memory-safe pixel probe: avoid full-frame prewarp per point and reuse client/buffers
+            # Uses forward LUT to place a subpixel dot in projector space via bilinear weights
+            try:
+                asset_dir = getattr(self._camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+                fpx = os.path.join(asset_dir, "proj_from_cam_x.npy")
+                fpy = os.path.join(asset_dir, "proj_from_cam_y.npy")
+                fx = _np.load(fpx).astype(_np.float32)
+                fy = _np.load(fpy).astype(_np.float32)
+            except Exception as e:
+                QMessageBox.warning(dlg, "Missing Maps", f"Need proj_from_cam_{'{x,y}'} maps: {e}")
+                return
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None:
+                return
+            proj_h, proj_w = inv_x.shape
+            cam_w, cam_h = fx.shape[1], fx.shape[0]
+            step = max(64, min(cam_w, cam_h)//16)
+            points = [(x, y) for y in range(step//2, cam_h, step) for x in range(step//2, cam_w, step)]
+            # Preallocate projector-space grayscale buffer
+            proj_img = _np.zeros((proj_h, proj_w), _np.uint8)
+            vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
+            errors = []
+            # Reuse ZMQ client if available
+            client = None
+            try:
+                from projector_client import ProjectorClient
+                client = ProjectorClient()
+            except Exception:
+                client = None
+            # Optional progress dialog
+            try:
+                from PyQt5.QtWidgets import QProgressDialog
+                prog = QProgressDialog("Probing pixels…", "Cancel", 0, len(points), dlg)
+                prog.setWindowModality(Qt.WindowModal)
+                prog.show()
+            except Exception:
+                prog = None
+            import gc as _gc, time as _t
+            from PyQt5.QtWidgets import QApplication as _QApp
+            for i, (x0, y0) in enumerate(points):
+                # Build sparse subpixel dot in projector space using forward LUT
+                px = float(fx[y0, x0]); py = float(fy[y0, x0])
+                if not _np.isfinite(px) or not _np.isfinite(py):
+                    continue
+                if px < 0 or py < 0 or px > (proj_w - 1.001) or py > (proj_h - 1.001):
+                    continue
+                xz = int(_np.floor(px)); yz = int(_np.floor(py))
+                dx = px - xz; dy = py - yz
+                xz1 = min(proj_w - 1, xz + 1); yz1 = min(proj_h - 1, yz + 1)
+                # Clear buffer and write four bilinear weights scaled to 255
+                proj_img.fill(0)
+                w00 = (1.0 - dx) * (1.0 - dy)
+                w10 = dx * (1.0 - dy)
+                w01 = (1.0 - dx) * dy
+                w11 = dx * dy
+                proj_img[yz,  xz ] = int(255.0 * w00)
+                proj_img[yz,  xz1] = int(255.0 * w10)
+                proj_img[yz1, xz ] = int(255.0 * w01)
+                proj_img[yz1, xz1] = int(255.0 * w11)
+                # Send to engine (reuse client) or fallback to Qt projector
+                sent = False
+                if client is not None:
+                    try:
+                        client.send_gray(proj_img, frame_id=8888, visible_id=0, immediate=True)
+                        sent = True
+                    except Exception:
+                        sent = False
+                if not sent:
+                    try:
+                        self.projection.show_image_raw_no_warp_no_flip(cv2.cvtColor(proj_img, cv2.COLOR_GRAY2BGR))
+                    except Exception:
+                        try:
+                            self.projection.show_image_fullscreen_on_second_monitor(cv2.cvtColor(proj_img, cv2.COLOR_GRAY2BGR), None)
+                        except Exception:
+                            pass
+                # Allow a short time for the projector to present the dot
+                try:
+                    _t.sleep(0.05)
+                except Exception:
+                    pass
+                # Capture and compute subpixel center near (x0,y0)
+                cap = _capture_gray()
+                if cap is None:
+                    continue
+                x1 = max(0, x0 - 8); x2 = min(cam_w, x0 + 9)
+                y1 = max(0, y0 - 8); y2 = min(cam_h, y0 + 9)
+                roi = cap[y1:y2, x1:x2].astype(_np.float32)
+                if roi.size == 0:
+                    continue
+                yy, xx = _np.mgrid[y1:y2, x1:x2]
+                w = _np.maximum(0.0, roi - roi.mean())
+                # Require sufficient local signal; skip if no visible dot
+                amp = float(roi.max() - roi.mean())
+                if not _np.isfinite(amp) or amp < 10.0 or w.sum() <= 1e-3:
+                    continue
+                s = w.sum()
+                cx = float((w * xx).sum() / s); cy = float((w * yy).sum() / s)
+                errors.append(_np.hypot(cx - x0, cy - y0))
+                cv2.circle(vis, (int(cx), int(cy)), 2, (0,255,0), -1)
+                cv2.arrowedLine(vis, (x0, y0), (int(cx), int(cy)), (0,255,255), 1, tipLength=0.3)
+                # UI/progress and periodic GC to keep memory in check
+                if prog is not None:
+                    try:
+                        prog.setValue(i + 1)
+                        _QApp.processEvents()
+                        if prog.wasCanceled():
+                            break
+                    except Exception:
+                        pass
+                if (i & 31) == 31:
+                    try: _gc.collect()
+                    except Exception: pass
+            try:
+                if client is not None:
+                    client.close()
+            except Exception:
+                pass
+            if errors:
+                mean_err = float(_np.mean(errors)); p95 = float(_np.percentile(errors, 95))
+                QMessageBox.information(dlg, "Pixel Probe", f"Samples: {len(errors)}\nMean: {mean_err:.2f} px\n95th %: {p95:.2f} px")
+                try:
+                    pm = _to_pix(vis)
+                    sl_pix.setPixmap(pm)
+                    sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                except Exception:
+                    pass
+
+        def _on_dot_array():
+            try:
+                from calibration import prewarp_with_inverse_lut as _prewarp
+            except Exception:
+                QMessageBox.warning(dlg, "Missing", "prewarp not available")
+                return
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None:
+                return
+            cam_w, cam_h = _infer_cam_size()
+            spacing = max(24, min(cam_w, cam_h)//24)
+            dot_r = 3
+            img = _np.zeros((cam_h, cam_w), _np.uint8)
+            pts = []
+            for y in range(spacing//2, cam_h, spacing):
+                for x in range(spacing//2, cam_w, spacing):
+                    cv2.circle(img, (x,y), dot_r, 255, -1); pts.append((x,y))
+            proj_h, proj_w = inv_x.shape
+            warped = _prewarp(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
+            sent = _send_to_engine_gray(warped)
+            if not sent:
+                try:
+                    self.projection.show_image_raw_no_warp_no_flip(warped)
+                except Exception:
+                    self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            cap = _capture_gray()
+            if cap is None:
+                return
+            # Threshold and find blobs
+            _, bw = cv2.threshold(cap, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            num, labels, stats, cent = cv2.connectedComponentsWithStats(bw, connectivity=8)
+            centers = cent[1:, :] if num>1 else _np.zeros((0,2), _np.float32)
+            used = _np.zeros(len(centers), dtype=bool)
+            errors = []
+            overlay = cv2.cvtColor(cap, cv2.COLOR_GRAY2BGR)
+            for (x,y) in pts:
+                # find nearest center
+                if centers.shape[0]==0:
+                    continue
+                d2 = _np.sum((centers - _np.array([[x,y]], _np.float32))**2, axis=1)
+                idx = int(_np.argmin(d2))
+                c = centers[idx]
+                if used[idx]:
+                    continue
+                used[idx] = True
+                err = float(_np.hypot(c[0]-x, c[1]-y))
+                errors.append(err)
+                cv2.circle(overlay, (int(c[0]), int(c[1])), 3, (0,255,0), -1)
+                cv2.arrowedLine(overlay, (x,y), (int(c[0]), int(c[1])), (0,255,255), 1, tipLength=0.3)
+            if errors:
+                mean_err = float(_np.mean(errors)); p95 = float(_np.percentile(errors, 95))
+                QMessageBox.information(dlg, "Dot Array", f"Samples: {len(errors)}\nMean: {mean_err:.2f} px\n95th %: {p95:.2f} px")
+                try:
+                    pm = _to_pix(overlay)
+                    sl_pix.setPixmap(pm)
+                    sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                except Exception:
+                    pass
+
+        def _on_round_trip_physical():
+            try:
+                from calibration import prewarp_with_inverse_lut as _prewarp
+            except Exception:
+                QMessageBox.warning(dlg, "Missing", "prewarp not available")
+                return
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None:
+                return
+            cam_w, cam_h = _infer_cam_size()
+            grid = _make_cam_grid(cam_w, cam_h)
+            proj_h, proj_w = inv_x.shape
+            warped = _prewarp(cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
+            sent = _send_to_engine_gray(warped)
+            if not sent:
+                try:
+                    self.projection.show_image_raw_no_warp_no_flip(warped)
+                except Exception:
+                    self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            cap = _capture_gray()
+            if cap is None:
+                return
+            # Map the captured camera image into projector space with inv LUT and compare to warped(gray)
+            cap_bgr = cv2.cvtColor(cap, cv2.COLOR_GRAY2BGR)
+            pred = cv2.remap(cap_bgr, inv_x, inv_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+            warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+            pred_gray = cv2.cvtColor(pred, cv2.COLOR_BGR2GRAY)
+            diff = (warped_gray.astype(_np.float32) - pred_gray.astype(_np.float32))
+            mse = float(_np.mean(diff*diff)); psnr = 99.0 if mse<=1e-9 else 10.0*_np.log10((255.0*255.0)/mse)
+            QMessageBox.information(dlg, "Round-Trip (Physical)", f"MSE: {mse:.1f}\nPSNR: {psnr:.2f} dB")
+            try:
+                pm = _to_pix(cv2.cvtColor(pred_gray, cv2.COLOR_GRAY2BGR))
+                sl_pix.setPixmap(pm)
+                sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+            except Exception:
+                pass
+
+        def _on_edge_strip():
+            try:
+                from calibration import prewarp_with_inverse_lut as _prewarp
+            except Exception:
+                QMessageBox.warning(dlg, "Missing", "prewarp not available")
+                return
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None:
+                return
+            cam_w, cam_h = _infer_cam_size()
+            positions = [int(cam_w*0.25), int(cam_w*0.5), int(cam_w*0.75)]
+            img = _np.zeros((cam_h, cam_w), _np.uint8)
+            for x in positions:
+                img[:, max(0, x-1):min(cam_w, x+1)] = 255
+            proj_h, proj_w = inv_x.shape
+            warped = _prewarp(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
+            sent = _send_to_engine_gray(warped)
+            if not sent:
+                try:
+                    self.projection.show_image_raw_no_warp_no_flip(warped)
+                except Exception:
+                    self.projection.show_image_fullscreen_on_second_monitor(warped, None)
+            cap = _capture_gray()
+            if cap is None:
+                return
+            errs = []
+            for x0 in positions:
+                x1 = max(0, x0-20); x2 = min(cam_w, x0+21)
+                roi = cap[:, x1:x2].astype(_np.float32)
+                gx = cv2.Sobel(roi, cv2.CV_32F, 1, 0, ksize=3)
+                prof = _np.mean(_np.abs(gx), axis=0)
+                # subpixel via quadratic fit around peak
+                i = int(_np.argmax(prof))
+                i0 = max(1, min(len(prof)-2, i))
+                y1 = prof[i0-1]; y2 = prof[i0]; y3 = prof[i0+1]
+                denom = (y1 - 2*y2 + y3)
+                delta = 0.0 if abs(denom) < 1e-6 else 0.5 * (y1 - y3) / denom
+                xpos = x1 + i0 + delta
+                errs.append(abs(xpos - x0))
+            if errs:
+                mean_err = float(_np.mean(errs)); p95 = float(_np.percentile(errs, 95))
+                QMessageBox.information(dlg, "Edge Strip", f"Lines: {len(errs)}\nMean: {mean_err:.2f} px\n95th %: {p95:.2f} px")
+
+        btn_probe.clicked.connect(_on_pixel_probe)
+        btn_dots.clicked.connect(_on_dot_array)
+        btn_rtphy.clicked.connect(_on_round_trip_physical)
+        btn_edge.clicked.connect(_on_edge_strip)
 
         # State for monitors
         from collections import deque
@@ -1233,9 +1783,48 @@ class Interface(QtWidgets.QMainWindow):
                     args = ["--pattern", "image", "--image", self._mask_pattern_path]
                 elif pat == "Folder":
                     args = ["--pattern", "folder", "--folder", self._mask_pattern_path]
-                elif pat == "Custom Python":
+                elif pat == "Seg Mask":
+                    # Send latest segmentation labels/masks from rois.npz
+                    try:
+                        roi_path = str((Path.cwd() / "rois.npz").resolve())
+                        args = ["--pattern", "segmask", "--roi-npz", roi_path]
+                    except Exception:
+                        args = ["--pattern", "segmask", "--roi-npz", "rois.npz"]
+                elif pat == "Custom":
                     script_path = self._mask_pattern_path or script_path
                     args = []
+                    # If file endswith .py, run with Python; else treat as executable
+                    try:
+                        if script_path.lower().endswith('.py'):
+                            cmd_prog = py
+                            cmd_args = [script_path] + args
+                            print(f"[MASK] Launch (python): {cmd_prog} {' '.join(cmd_args)}")
+                            self._proc_masks.start(cmd_prog, cmd_args)
+                        else:
+                            from PyQt5.QtCore import QFileInfo
+                            fi = QFileInfo(script_path)
+                            cmd_prog = fi.absoluteFilePath()
+                            print(f"[MASK] Launch (exec): {cmd_prog} {' '.join(args)}")
+                            self._proc_masks.start(cmd_prog, args)
+                        return
+                    except Exception as e:
+                        print(f"Custom sender launch failed: {e}")
+
+                # If LUT mode is active, pass prewarp dir
+                try:
+                    if getattr(self, '_proj_warp_mode', 'H') == 'LUT':
+                        asset_dir = getattr(self._camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+                        args += ["--prewarp-lut-dir", asset_dir]
+                        # Ensure engine H is cleared
+                        try:
+                            import zmq as _zmq
+                            _ctx = _zmq.Context.instance(); _s = _ctx.socket(_zmq.REQ)
+                            _s.setsockopt(_zmq.LINGER, 0)
+                            _s.connect("tcp://127.0.0.1:5560"); _s.send(b"IDENTITY"); _ = _s.recv(); _s.close()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
 
                 try:
                     from PyQt5.QtCore import QProcessEnvironment
@@ -1653,6 +2242,8 @@ class Interface(QtWidgets.QMainWindow):
             self._camera.stop_realtime_acquisition()
             self._camera.start_hardware_acquisition()
             
+            # Do not force exposure in hardware trigger mode; exposure is controlled by the trigger timing
+            
             try:
                 node_map = self._camera.node_map
                 mode_node = node_map.FindNode("TriggerMode")
@@ -1679,6 +2270,23 @@ class Interface(QtWidgets.QMainWindow):
             
             self._camera.stop_hardware_acquisition()
             self._camera.start_realtime_acquisition()
+            
+            # Set default exposure to 33333.33 µs
+            try:
+                if hasattr(self._camera, "set_exposure_us"):
+                    self._camera.set_exposure_us(33333.33)
+                else:
+                    # Fallback: try node map if available
+                    nm = getattr(self._camera, "node_map", None)
+                    if nm is not None:
+                        nm.FindNode("ExposureTime").SetValue(33333.33)
+                print(f"[CAM] Default exposure set to 33333.33 µs")
+                # Update the exposure text box to show the set value
+                if hasattr(self, '_exp_line'):
+                    self._exp_line.setText("33333.333")
+            except Exception as e:
+                print(f"Default exposure set failed: {e}")
+            
             self.acq_label.setText("Acquisition Mode: RealTime")
             self._button_start_hardware_acquisition.setText("Start Hardware Acquisition")
             if not self._recording_status:
@@ -1810,9 +2418,16 @@ class Interface(QtWidgets.QMainWindow):
             print(f"_project_off failed: {e}")
 
     def _sl_calibrate(self):
-        """Run Structured-Light (Gray-code) calibration end-to-end."""
+        """Run Structured-Light calibration end-to-end (Gray + Phase subpixel)."""
         try:
-            from calibration import generate_gray_code_patterns, save_gray_code_patterns, decode_gray_code_from_files, invert_cam_to_proj_lut
+            from calibration import (
+                generate_gray_code_patterns,
+                generate_phase_shift_patterns,
+                save_structured_light_patterns,
+                decode_gray_code_from_files,
+                decode_phase_shift_from_files,
+                invert_cam_to_proj_lut,
+            )
         except Exception as e:
             print(f"Structured-light not available: {e}")
             return
@@ -1821,15 +2436,24 @@ class Interface(QtWidgets.QMainWindow):
             print("Projection window unavailable.")
             return
 
-        # 1) Generate patterns at projector resolution
+        # 1) Generate patterns at projector resolution (Gray + Phase)
         try:
             scr = self.projection.windowHandle().screen() if self.projection.windowHandle() else None
             geo = scr.geometry() if scr else None
             proj_w = geo.width() if geo else 1920
             proj_h = geo.height() if geo else 1080
-            patterns = generate_gray_code_patterns(proj_w, proj_h)
-            pattern_paths = save_gray_code_patterns(patterns)
-            print(f"Generated {len(pattern_paths)} Gray-code patterns")
+            gray_patterns = generate_gray_code_patterns(proj_w, proj_h)
+            use_phase = getattr(self, '_chk_phase_refine', None) is not None and self._chk_phase_refine.isChecked()
+            if use_phase:
+                # Enable phase-shift patterns for subpixel refinement
+                phase_patterns = generate_phase_shift_patterns(
+                    proj_w, proj_h, num_phases=3, cycles_x=1, cycles_y=1, gamma=1.0
+                )
+                patterns = gray_patterns + phase_patterns
+            else:
+                patterns = gray_patterns
+            pattern_paths = save_structured_light_patterns(patterns)
+            print(f"Generated {len(pattern_paths)} structured-light patterns (Gray+Phase)")
         except Exception as e:
             print(f"Failed to generate patterns: {e}")
             return
@@ -1847,6 +2471,22 @@ class Interface(QtWidgets.QMainWindow):
         # 2) Project each pattern and capture a camera frame
         capture_paths = []
         last_pidx = None
+        # If using engine, clear any homography so patterns are unwarped on output
+        try:
+            use_engine = hasattr(self, '_proc_projector') and (self._proc_projector is not None)
+            if use_engine:
+                try:
+                    import zmq as _zmq
+                    _ctx = _zmq.Context.instance(); _s = _ctx.socket(_zmq.REQ)
+                    _s.setsockopt(_zmq.LINGER, 0)
+                    _s.connect("tcp://127.0.0.1:5560")
+                    _s.send(b"IDENTITY")
+                    _ = _s.recv()
+                    _s.close()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         for idx, (ppath, meta) in enumerate(zip(pattern_paths, patterns)):
             try:
                 # Prefer in-memory pattern image to avoid disk I/O latency
@@ -1871,10 +2511,16 @@ class Interface(QtWidgets.QMainWindow):
                             client.wait_next_trigger(0, timeout_ms=500)
                         else:
                             client.wait_next_trigger(last_pidx, timeout_ms=500)
-                        client.send_gray(img, frame_id=idx+1, visible_overlay=self._button_toggle_overlay.isChecked())
+                        # Force engine overlay OFF for SL, and request immediate scheduling
+                        client.send_gray(img, frame_id=idx+1, visible_id=0, immediate=True)
                         matched = client.wait_visible(idx+1, timeout_ms=500)
                         if matched is not None:
                             last_pidx = matched
+                        # Allow camera to expose the just-shown pattern before snapshot
+                        try:
+                            QtCore.QThread.msleep(60)
+                        except Exception:
+                            pass
                         client.close()
                     except Exception as ez:
                         print(f"[SL] ZMQ send failed, falling back to local display: {ez}")
@@ -1910,9 +2556,22 @@ class Interface(QtWidgets.QMainWindow):
             def _sl_decode_worker(paths, pats, pw, ph, asset_dir):
                 try:
                     import numpy as _np, cv2 as _cv2
-                    from calibration import decode_gray_code_from_files as _decode, invert_cam_to_proj_lut as _invert
+                    from calibration import (
+                        decode_gray_code_from_files as _decode_gray,
+                        decode_phase_shift_from_files as _decode_phase,
+                        invert_cam_to_proj_lut as _invert,
+                    )
+                    # Split captures: Gray-code vs Phase (optional)
+                    pairs = [(p, m) for p, m in zip(paths, pats)]
+                    gray_pairs  = [(p, m) for (p, m) in pairs if isinstance(m, dict) and ('bit' in m)]
+                    phase_pairs = [(p, m) for (p, m) in pairs if isinstance(m, dict) and (m.get('type') == 'phase')]
+                    paths_gray  = [p for (p, _) in gray_pairs]
+                    meta_gray   = [m for (_, m) in gray_pairs]
+                    paths_phase = [p for (p, _) in phase_pairs]
+                    meta_phase  = [m for (_, m) in phase_pairs]
+
                     cam_h, cam_w = 1080, 1920
-                    for _fp in reversed(paths):
+                    for _fp in reversed(paths_gray):  # Only check Gray patterns
                         if not _fp:
                             continue
                         _img = _cv2.imread(_fp, _cv2.IMREAD_GRAYSCALE)
@@ -1920,13 +2579,56 @@ class Interface(QtWidgets.QMainWindow):
                             cam_h, cam_w = _img.shape[:2]
                             break
                     print(f"[SL] Decoding Gray-code at {cam_w}x{cam_h} → proj {pw}x{ph}…")
-                    proj_x_of_cam, proj_y_of_cam = _decode(paths, pats, cam_h, cam_w, pw, ph)
+                    proj_x_of_cam, proj_y_of_cam = _decode_gray(paths_gray, meta_gray, cam_h, cam_w, pw, ph)
+                    
+                    # Optionally apply phase-shift refinement only if present and valid
+                    try:
+                        if len(paths_phase) > 0 and len(meta_phase) > 0:
+                            print(f"[SL] Decoding Phase-shift for subpixel refinement…")
+                            px_phase, py_phase, ax, ay = _decode_phase(paths_phase, meta_phase, cam_h, cam_w, pw, ph, num_phases=3, amp_thresh=5.0)
+                            # Adaptive amplitude gating: use stricter threshold if coverage is low
+                            amp_thr = 5.0
+                            # Estimate potential coverage
+                            cov_x = float((_np.sum(ax > amp_thr)) / (ax.size if ax.size else 1))
+                            cov_y = float((_np.sum(ay > amp_thr)) / (ay.size if ay.size else 1))
+                            # If coverage < 20%, try lower threshold 3.0 to rescue weak areas
+                            if cov_x < 0.2 or cov_y < 0.2:
+                                amp_thr = 3.0
+                            use_x = (px_phase >= 0.0) & (ax > amp_thr)
+                            use_y = (py_phase >= 0.0) & (ay > amp_thr)
+                            applied_x = int(_np.sum(use_x)); applied_y = int(_np.sum(use_y))
+                            # Only apply if meaningful coverage (e.g., >10% of pixels)
+                            min_cov = 0.10
+                            if (applied_x / float(px_phase.size if px_phase.size else 1) > min_cov) or (applied_y / float(py_phase.size if py_phase.size else 1) > min_cov):
+                                proj_x_of_cam = proj_x_of_cam.astype(_np.float32, copy=True)
+                                proj_y_of_cam = proj_y_of_cam.astype(_np.float32, copy=True)
+                                if applied_x > 0:
+                                    proj_x_of_cam[use_x] = px_phase[use_x]
+                                if applied_y > 0:
+                                    proj_y_of_cam[use_y] = py_phase[use_y]
+                                print(f"[SL] Phase refinement applied: {applied_x} X px, {applied_y} Y px (thr={amp_thr})")
+                            else:
+                                print(f"[SL] Phase refinement skipped due to low coverage (X={applied_x}, Y={applied_y})")
+                        else:
+                            print("[SL] Phase patterns not included; using Gray-code only")
+                    except Exception as _pe:
+                        print(f"[SL] Phase refinement skipped: {_pe}")
+                        print("[SL] Using Gray-code only (phase refinement failed)")
                     _np.save("/".join([asset_dir, "proj_from_cam_x.npy"]), proj_x_of_cam)
                     _np.save("/".join([asset_dir, "proj_from_cam_y.npy"]), proj_y_of_cam)
                     inv_x, inv_y = _invert(proj_x_of_cam, proj_y_of_cam, pw, ph)
                     _np.save("/".join([asset_dir, "cam_from_proj_x.npy"]), inv_x)
                     _np.save("/".join([asset_dir, "cam_from_proj_y.npy"]), inv_y)
-                    print("✅ Structured-light LUTs saved (background)")
+                    
+                    # Generate diagnostic visualization
+                    try:
+                        from calibration import visualize_lut_quality
+                        diag_path = "/".join([asset_dir, "lut_diagnostic.png"])
+                        visualize_lut_quality(inv_x, inv_y, diag_path)
+                    except Exception as diag_e:
+                        print(f"Could not generate diagnostic: {diag_e}")
+                    
+                    print("✅ Structured-light LUTs (subpixel) saved (background)")
                     try:
                         # Notify GUI thread
                         self.sl_decode_done.emit(True, "LUTs saved")
@@ -1982,8 +2684,15 @@ class Interface(QtWidgets.QMainWindow):
                     img = cv2.resize(img, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
             except Exception:
                 pass
-            # Prewarp
-            warped = prewarp_with_inverse_lut(img, inv_x, inv_y, proj_w, proj_h)
+            # Prewarp with error handling
+            try:
+                warped = prewarp_with_inverse_lut(img, inv_x, inv_y, proj_w, proj_h)
+            except Exception as warp_e:
+                print(f"Warping failed: {warp_e}")
+                # Try simple resize as fallback
+                warped = cv2.resize(img, (proj_w, proj_h), interpolation=cv2.INTER_LINEAR)
+                print("Using simple resize as fallback")
+            
             # Prefer projection engine via ZMQ if running; ensures sync with triggers
             use_engine = hasattr(self, '_proc_projector') and (self._proc_projector is not None)
             if use_engine:
@@ -1991,9 +2700,21 @@ class Interface(QtWidgets.QMainWindow):
                     from projector_client import ProjectorClient
                     # Engine expects 1920x1080; client will resize
                     client = ProjectorClient()
+                    # Clear engine homography so the prewarped image is not warped again
+                    try:
+                        import zmq as _zmq
+                        _ctx = _zmq.Context.instance(); _s = _ctx.socket(_zmq.REQ)
+                        _s.setsockopt(_zmq.LINGER, 0)
+                        _s.connect("tcp://127.0.0.1:5560"); _s.send(b"IDENTITY"); _ = _s.recv(); _s.close()
+                    except Exception:
+                        pass
                     if getattr(self, '_button_hw_trig', None) and self._button_hw_trig.isChecked():
                         client.enable_gpio_trigger(22)
-                    client.send_gray(warped, frame_id=9999, visible_overlay=self._button_toggle_overlay.isChecked())
+                    client.send_gray(
+                        warped,
+                        frame_id=9999,
+                        visible_id=int(bool(self._button_toggle_overlay.isChecked()))
+                    )
                     # Optionally wait for visibility, but pulsing is now handled by background subscriber when enabled
                     _ = client.wait_visible(9999, timeout_ms=250)
                     client.close()
@@ -2306,6 +3027,111 @@ class Interface(QtWidgets.QMainWindow):
         except Exception:
             pass
         self._camera.set_gain(value)
+
+    def _apply_exposure_from_text(self):
+        try:
+            txt = self._exp_line.text().strip()
+            if not txt:
+                return
+            exp_us = float(txt)
+            if not (exp_us > 0):
+                return
+            # Apply to camera
+            if hasattr(self._camera, "set_exposure_us"):
+                self._camera.set_exposure_us(exp_us)
+            else:
+                # Fallback: try node map if available
+                try:
+                    nm = getattr(self._camera, "node_map", None)
+                    if nm is not None:
+                        nm.FindNode("ExposureTime").SetValue(exp_us)
+                except Exception:
+                    pass
+            print(f"[CAM] Exposure set to {exp_us:.3f} µs")
+        except Exception as e:
+            print(f"Exposure apply failed: {e}")
+
+    def _open_sensor_settings(self):
+        try:
+            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QGridLayout, QLabel, QPushButton
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Sensor Settings")
+            # Make it a movable, modeless top-level window
+            try:
+                dlg.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
+                dlg.setModal(False)
+                dlg.setWindowModality(QtCore.Qt.NonModal)
+                dlg.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+            except Exception:
+                pass
+            lay = QVBoxLayout(dlg)
+            grid = QGridLayout()
+
+            # Reuse existing widgets by creating new controls bound to same slots
+            # AG slider
+            ag_label = QtWidgets.QLabel("Analog Gain")
+            ag_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+            ag_slider.setRange(self._gain_slider.minimum(), self._gain_slider.maximum())
+            ag_slider.setValue(self._gain_slider.value())
+            ag_slider.valueChanged.connect(self._update_gain)
+            ag_val = QtWidgets.QLabel(self._gain_value_label.text())
+            ag_slider.valueChanged.connect(lambda v: ag_val.setText(f"{v/100:.2f}"))
+
+            grid.addWidget(ag_label, 0, 0)
+            grid.addWidget(ag_slider, 0, 1)
+            grid.addWidget(ag_val, 0, 2)
+
+            # DG slider
+            dg_label = QtWidgets.QLabel("Digital Gain")
+            dg_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+            dg_slider.setRange(self._dgain_slider.minimum(), self._dgain_slider.maximum())
+            dg_slider.setValue(self._dgain_slider.value())
+            dg_slider.valueChanged.connect(self._update_dgain)
+            dg_val = QtWidgets.QLabel(self._dgain_value_label.text())
+            dg_slider.valueChanged.connect(lambda v: dg_val.setText(f"{v/100:.2f}"))
+
+            grid.addWidget(dg_label, 1, 0)
+            grid.addWidget(dg_slider, 1, 1)
+            grid.addWidget(dg_val, 1, 2)
+
+            # Exposure textbox
+            exp_label = QtWidgets.QLabel("Exposure (µs)")
+            exp_line = QtWidgets.QLineEdit(self._exp_line.text())
+            exp_line.setValidator(QtGui.QDoubleValidator(1.0, 1e9, 3))
+
+            def _apply_local_exp():
+                try:
+                    self._exp_line.setText(exp_line.text())
+                    self._apply_exposure_from_text()
+                except Exception:
+                    pass
+
+            grid.addWidget(exp_label, 2, 0)
+            grid.addWidget(exp_line, 2, 1, 1, 2)
+            try:
+                set_btn = QPushButton("Set")
+                set_btn.clicked.connect(_apply_local_exp)
+                grid.addWidget(set_btn, 2, 3)
+            except Exception:
+                pass
+
+            lay.addLayout(grid)
+            btns = QtWidgets.QHBoxLayout()
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(dlg.accept)
+            btns.addStretch(1)
+            btns.addWidget(close_btn)
+            lay.addLayout(btns)
+            # Keep a reference so it stays alive when shown modelessly
+            self._sensor_settings_dlg = dlg
+            try:
+                dlg.show()
+                dlg.raise_()
+                dlg.activateWindow()
+            except Exception:
+                dlg.show()
+        except Exception as e:
+            print(f"Sensor Settings UI error: {e}")
 
 
     # Zoom slider methods removed - using mouse wheel zoom instead

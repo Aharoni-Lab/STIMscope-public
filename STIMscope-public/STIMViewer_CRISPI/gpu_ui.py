@@ -102,6 +102,11 @@ class GPU(QtWidgets.QWidget):
                 self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
                 self.plot_widget.setMouseEnabled(x=False, y=False)
                 self.plot_widget.setYRange(0, 255)
+                try:
+                    self.plot_widget.setLabel('left', 'Intensity')
+                    self.plot_widget.setLabel('bottom', 'Time (frames)')
+                except Exception:
+                    pass
                 self.layout.addWidget(self.plot_widget)
             except Exception as e:
                 print(f"pyqtgraph unavailable, continuing without on-screen traces: {e}")
@@ -167,6 +172,17 @@ class GPU(QtWidgets.QWidget):
         btn = QtWidgets.QPushButton("👁️ View Exported Traces")
         btn.clicked.connect(self._view_exported_traces)
         grid.addWidget(btn, row, 0, 1, 2)  # Span 2 columns
+
+        # OASIS (Online) toggle under Discover Mask
+        try:
+            self._button_oasis_online = QtWidgets.QPushButton("OASIS (Online)")
+            self._button_oasis_online.setCheckable(True)
+            self._button_oasis_online.setChecked(False)
+            self._button_oasis_online.setToolTip("Apply fast online OASIS deconvolution to ROI traces (enabled only when pressed)")
+            self._button_oasis_online.toggled.connect(self._toggle_oasis)
+            grid.addWidget(self._button_oasis_online, row, 2)
+        except Exception:
+            pass
 
         self.layout.addLayout(grid)
 
@@ -332,7 +348,26 @@ class GPU(QtWidgets.QWidget):
                 screens = QGuiApplication.screens()
                 scr = screens[1] if len(screens) > 1 else screens[0]
                 size = scr.size()
-                rgb = cv2.resize(rgb, (size.width(), size.height()), interpolation=cv2.INTER_NEAREST)
+                tgt_w, tgt_h = size.width(), size.height()
+                h, w = rgb.shape[:2]
+                if h <= tgt_h and w <= tgt_w:
+                    pad_top = (tgt_h - h) // 2
+                    pad_bottom = tgt_h - h - pad_top
+                    pad_left = (tgt_w - w) // 2
+                    pad_right = tgt_w - w - pad_left
+                    try:
+                        rgb = cv2.copyMakeBorder(
+                            rgb, pad_top, pad_bottom, pad_left, pad_right,
+                            borderType=cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                        )
+                    except Exception:
+                        rgb = np.pad(
+                            rgb,
+                            ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                            mode='constant', constant_values=0
+                        )
+                else:
+                    rgb = cv2.resize(rgb, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
 
                 if self.proj_display:
                     try:
@@ -425,16 +460,31 @@ class GPU(QtWidgets.QWidget):
                 camera=self.camera,
                 label_path=self.rois_path,
                 plot_widget=self.plot_widget,
-                max_points=150,
+                max_points=300,
                 max_rois=50,
                 use_pygame_plot=False,
                 enable_sync=False,
             )
 
-          
+            # Apply OASIS toggle state if requested
+            try:
+                enabled = getattr(self, '_button_oasis_online', None) is not None and self._button_oasis_online.isChecked()
+                if enabled and hasattr(self.live_extractor, 'set_oasis_enabled'):
+                    self.live_extractor.set_oasis_enabled(True)
+            except Exception:
+                pass
+
             print("Live trace extractor started.")
         except Exception as e:
             print(f"Failed to start live traces: {e}")
+
+    def _toggle_oasis(self, checked: bool):
+        try:
+            if self.live_extractor is not None and hasattr(self.live_extractor, 'set_oasis_enabled'):
+                self.live_extractor.set_oasis_enabled(bool(checked))
+                print(f"[UI] OASIS online deconvolution {'enabled' if checked else 'disabled'}")
+        except Exception as e:
+            print(f"[UI] Failed to toggle OASIS: {e}")
 
 
     def stop_live_traces(self):
@@ -525,7 +575,30 @@ class GPU(QtWidgets.QWidget):
                         screens = QGuiApplication.screens()
                         scr = screens[1] if len(screens) > 1 else screens[0]
                         size = scr.size()
-                        rgb = cv2.resize(rgb, (size.width(), size.height()), interpolation=cv2.INTER_NEAREST)
+                        tgt_w, tgt_h = size.width(), size.height()
+
+                        # If mask image is smaller than projector screen, pad with black instead of resizing
+                        h, w = rgb.shape[:2]
+                        if h <= tgt_h and w <= tgt_w:
+                            pad_top = (tgt_h - h) // 2
+                            pad_bottom = tgt_h - h - pad_top
+                            pad_left = (tgt_w - w) // 2
+                            pad_right = tgt_w - w - pad_left
+                            try:
+                                rgb = cv2.copyMakeBorder(
+                                    rgb, pad_top, pad_bottom, pad_left, pad_right,
+                                    borderType=cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                                )
+                            except Exception:
+                                # Fallback to numpy pad if OpenCV fails
+                                rgb = np.pad(
+                                    rgb,
+                                    ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                                    mode='constant', constant_values=0
+                                )
+                        else:
+                            # If larger or mismatched, keep existing nearest-neighbor resize
+                            rgb = cv2.resize(rgb, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
 
                         if self.proj_display:
                             try:
@@ -665,10 +738,42 @@ class GPU(QtWidgets.QWidget):
                             masks = mask_list
                             print(f"✅ Converted to {len(masks)} individual masks")
                         else:
-                            print(f"⚠️ Unexpected 3D mask shape: {masks.shape}, expected (N, {mean.shape[0]}, {mean.shape[1]})")
-                            restore_after_napari()
-                            return
+                            # Attempt to resize masks to match mean shape using nearest neighbor
+                            try:
+                                H, W = mean.shape
+                                print(f"ℹ️ Resizing 3D masks from {masks.shape[1:]} to {(H, W)} with nearest-neighbor")
+                                mask_list = []
+                                for i in range(masks.shape[0]):
+                                    m = masks[i]
+                                    if m.shape != mean.shape:
+                                        m_resized = cv2.resize(m.astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST)
+                                    else:
+                                        m_resized = m.astype(np.uint8)
+                                    mr = m_resized.astype(bool)
+                                    if mr.sum() > 0:
+                                        mask_list.append(mr)
+                                if len(mask_list) == 0:
+                                    print("❌ All resized masks were empty; aborting")
+                                    restore_after_napari()
+                                    return
+                                masks = mask_list
+                                print(f"✅ Resized and converted to {len(masks)} individual masks")
+                            except Exception as rez_err:
+                                print(f"❌ Failed to resize 3D masks: {rez_err}")
+                                restore_after_napari()
+                                return
                     elif masks.ndim == 2:
+
+                        # If labels array doesn't match mean shape, resize labels with nearest neighbor
+                        if masks.shape != mean.shape:
+                            try:
+                                H, W = mean.shape
+                                print(f"ℹ️ Resizing 2D labels from {masks.shape} to {(H, W)} with nearest-neighbor")
+                                masks = cv2.resize(masks.astype(np.int32), (W, H), interpolation=cv2.INTER_NEAREST)
+                            except Exception as rez2_err:
+                                print(f"❌ Failed to resize labels: {rez2_err}")
+                                restore_after_napari()
+                                return
 
                         print(f"🔄 Converting 2D labels array ({masks.shape}) to list of 2D masks")
                         unique_ids = np.unique(masks)

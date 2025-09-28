@@ -89,10 +89,13 @@ static std::string MAP_CSV_PATH = "mask_map.csv";
 static std::string ZMQ_H_BIND   = "tcp://*:5560"; // REP endpoint to receive 3x3 H (float64[9])
 static int         HORIZ_FLIP   = 1;              // 1 = mirror horizontally after warp (to match Python path)
 static std::string H_FILE_PATH  = "";            // optional on-disk H preload (text with 9 doubles)
+static int         WARP_BILINEAR= 1;              // 1 = bilinear, 0 = nearest-neighbor
 
 static std::mutex           g_h_mtx;
 static double               g_H[9]       = {1,0,0, 0,1,0, 0,0,1};
 static std::vector<int>     g_h_src_idx;          // size WIDTH*HEIGHT, maps dst idx -> src idx (-1 if oob)
+static std::vector<float>   g_h_src_fx;           // bilinear: source x per dest pixel (-1 if oob)
+static std::vector<float>   g_h_src_fy;           // bilinear: source y per dest pixel (-1 if oob)
 static std::atomic<bool>    g_h_ready{false};
 
 // ---------- shared state ----------
@@ -236,6 +239,8 @@ static void precompute_h_map_unlocked(){
         return;
     }
     g_h_src_idx.assign((size_t)WIDTH * (size_t)HEIGHT, -1);
+    g_h_src_fx.assign((size_t)WIDTH * (size_t)HEIGHT, -1.0f);
+    g_h_src_fy.assign((size_t)WIDTH * (size_t)HEIGHT, -1.0f);
     const int W = WIDTH, Ht = HEIGHT;
     for (int y = 0; y < Ht; ++y){
         for (int x = 0; x < W; ++x){
@@ -255,6 +260,8 @@ static void precompute_h_map_unlocked(){
                 size_t dst_idx = (size_t)y * (size_t)W + (size_t)x;
                 size_t src_idx = (size_t)yi * (size_t)W + (size_t)xi;
                 g_h_src_idx[dst_idx] = (int)src_idx;
+                g_h_src_fx[dst_idx] = (float)xs;
+                g_h_src_fy[dst_idx] = (float)ys;
             }
         }
     }
@@ -273,6 +280,42 @@ static void warp_mask_nn(const unsigned char* src, std::vector<unsigned char>& d
     for (size_t i = 0; i < N; ++i){
         int si = (i < g_h_src_idx.size()) ? g_h_src_idx[i] : -1;
         dst[i] = (si >= 0) ? src[(size_t)si] : 0;
+    }
+}
+
+static void warp_mask_bilinear(const unsigned char* src, std::vector<unsigned char>& dst){
+    const int W = WIDTH, H = HEIGHT;
+    const size_t N = (size_t)W * (size_t)H;
+    if (!src){
+        dst.assign(N, 0);
+        return;
+    }
+    if (dst.size() != N) dst.resize(N);
+    for (size_t i = 0; i < N; ++i){
+        float fx = (i < g_h_src_fx.size()) ? g_h_src_fx[i] : -1.0f;
+        float fy = (i < g_h_src_fy.size()) ? g_h_src_fy[i] : -1.0f;
+        if (fx < 0.0f || fy < 0.0f){ dst[i] = 0; continue; }
+        int x0 = (int)std::floor(fx);
+        int y0 = (int)std::floor(fy);
+        float dx = fx - (float)x0;
+        float dy = fy - (float)y0;
+        int x1 = x0 + 1;
+        int y1 = y0 + 1;
+        if (x0 < 0 || x0 >= W || y0 < 0 || y0 >= H){ dst[i] = 0; continue; }
+        if (x1 >= W) x1 = W - 1;
+        if (y1 >= H) y1 = H - 1;
+        const unsigned char p00 = src[(size_t)y0 * (size_t)W + (size_t)x0];
+        const unsigned char p10 = src[(size_t)y0 * (size_t)W + (size_t)x1];
+        const unsigned char p01 = src[(size_t)y1 * (size_t)W + (size_t)x0];
+        const unsigned char p11 = src[(size_t)y1 * (size_t)W + (size_t)x1];
+        float w00 = (1.0f - dx) * (1.0f - dy);
+        float w10 = dx * (1.0f - dy);
+        float w01 = (1.0f - dx) * dy;
+        float w11 = dx * dy;
+        float v = w00 * (float)p00 + w10 * (float)p10 + w01 * (float)p01 + w11 * (float)p11;
+        int vi = (int)std::lround(v);
+        if (vi < 0) vi = 0; if (vi > 255) vi = 255;
+        dst[i] = (unsigned char)vi;
     }
 }
 
@@ -1071,7 +1114,8 @@ int main(int argc, char** argv){
                 static std::vector<unsigned char> warped;
                 bool use_h = g_h_ready.load();
                 if (use_h){
-                    warp_mask_nn(ptr, warped);
+                    if (WARP_BILINEAR) warp_mask_bilinear(ptr, warped);
+                    else warp_mask_nn(ptr, warped);
                 }
 
                 // Prepare overlay buffers; draw timing depends on use_h
@@ -1130,12 +1174,14 @@ int main(int argc, char** argv){
                                 unsigned char* dst = plate_src.data() + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
                                 std::memset(dst, 255, (size_t)run);
                             }
-                            warp_mask_nn(plate_src.data(), plate_w);
+                            if (WARP_BILINEAR) warp_mask_bilinear(plate_src.data(), plate_w);
+                            else warp_mask_nn(plate_src.data(), plate_w);
                         } else {
                             plate_w.clear();
                         }
 
-                        warp_mask_nn(ov_full.data(), ov_warped);
+                        if (WARP_BILINEAR) warp_mask_bilinear(ov_full.data(), ov_warped);
+                        else warp_mask_nn(ov_full.data(), ov_warped);
 
                         // Apply black plate in dest space
                         if (!plate_w.empty()){
