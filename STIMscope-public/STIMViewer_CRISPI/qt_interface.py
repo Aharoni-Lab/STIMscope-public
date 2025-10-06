@@ -1188,9 +1188,19 @@ class Interface(QtWidgets.QMainWindow):
                 return False
 
         def _capture_gray():
-            save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
-            os.makedirs(save_dir, exist_ok=True)
-            cap_path = os.path.join(save_dir, "sl_validation_cap.png")
+            # Prefer RAM-backed path to avoid heavy disk I/O during probes
+            try:
+                tmp_dir = "/dev/shm"
+                if os.path.isdir(tmp_dir) and os.access(tmp_dir, os.W_OK):
+                    cap_path = os.path.join(tmp_dir, "sl_validation_cap.png")
+                else:
+                    save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                    os.makedirs(save_dir, exist_ok=True)
+                    cap_path = os.path.join(save_dir, "sl_validation_cap.png")
+            except Exception:
+                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                os.makedirs(save_dir, exist_ok=True)
+                cap_path = os.path.join(save_dir, "sl_validation_cap.png")
             self._camera.snapshot(cap_path)
             return cv2.imread(cap_path, cv2.IMREAD_GRAYSCALE)
 
@@ -1211,8 +1221,16 @@ class Interface(QtWidgets.QMainWindow):
                 return
             proj_h, proj_w = inv_x.shape
             cam_w, cam_h = fx.shape[1], fx.shape[0]
-            step = max(64, min(cam_w, cam_h)//16)
+            step = max(96, min(cam_w, cam_h)//12)
             points = [(x, y) for y in range(step//2, cam_h, step) for x in range(step//2, cam_w, step)]
+            # Limit total samples aggressively to avoid overloading system
+            try:
+                max_samples = 40
+                if len(points) > max_samples:
+                    stride = int(_np.ceil(len(points) / float(max_samples)))
+                    points = points[::max(1, stride)]
+            except Exception:
+                pass
             # Preallocate projector-space grayscale buffer
             proj_img = _np.zeros((proj_h, proj_w), _np.uint8)
             vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
@@ -1229,12 +1247,26 @@ class Interface(QtWidgets.QMainWindow):
                 from PyQt5.QtWidgets import QProgressDialog
                 prog = QProgressDialog("Probing pixels…", "Cancel", 0, len(points), dlg)
                 prog.setWindowModality(Qt.WindowModal)
+                prog.setAutoClose(False)
+                prog.setAutoReset(False)
                 prog.show()
             except Exception:
                 prog = None
             import gc as _gc, time as _t
             from PyQt5.QtWidgets import QApplication as _QApp
+            t_start = _t.time()
+            consecutive_fail = 0
             for i, (x0, y0) in enumerate(points):
+                # Hard overall time cap (e.g., ~8s)
+                if (_t.time() - t_start) > 8.0:
+                    break
+                # Early cancel check to keep UI responsive
+                if prog is not None:
+                    try:
+                        if prog.wasCanceled():
+                            break
+                    except Exception:
+                        pass
                 # Build sparse subpixel dot in projector space using forward LUT
                 px = float(fx[y0, x0]); py = float(fy[y0, x0])
                 if not _np.isfinite(px) or not _np.isfinite(py):
@@ -1272,27 +1304,37 @@ class Interface(QtWidgets.QMainWindow):
                             pass
                 # Allow a short time for the projector to present the dot
                 try:
-                    _t.sleep(0.05)
+                    _t.sleep(0.02)
                 except Exception:
                     pass
                 # Capture and compute subpixel center near (x0,y0)
                 cap = _capture_gray()
                 if cap is None:
+                    consecutive_fail += 1
+                    if consecutive_fail >= 20:
+                        break
                     continue
-                x1 = max(0, x0 - 8); x2 = min(cam_w, x0 + 9)
-                y1 = max(0, y0 - 8); y2 = min(cam_h, y0 + 9)
+                x1 = max(0, x0 - 4); x2 = min(cam_w, x0 + 5)
+                y1 = max(0, y0 - 4); y2 = min(cam_h, y0 + 5)
                 roi = cap[y1:y2, x1:x2].astype(_np.float32)
                 if roi.size == 0:
+                    consecutive_fail += 1
+                    if consecutive_fail >= 20:
+                        break
                     continue
                 yy, xx = _np.mgrid[y1:y2, x1:x2]
                 w = _np.maximum(0.0, roi - roi.mean())
                 # Require sufficient local signal; skip if no visible dot
                 amp = float(roi.max() - roi.mean())
-                if not _np.isfinite(amp) or amp < 10.0 or w.sum() <= 1e-3:
+                if not _np.isfinite(amp) or amp < 25.0 or w.sum() <= 1e-3:
+                    consecutive_fail += 1
+                    if consecutive_fail >= 20:
+                        break
                     continue
                 s = w.sum()
                 cx = float((w * xx).sum() / s); cy = float((w * yy).sum() / s)
                 errors.append(_np.hypot(cx - x0, cy - y0))
+                consecutive_fail = 0
                 cv2.circle(vis, (int(cx), int(cy)), 2, (0,255,0), -1)
                 cv2.arrowedLine(vis, (x0, y0), (int(cx), int(cy)), (0,255,255), 1, tipLength=0.3)
                 # UI/progress and periodic GC to keep memory in check
@@ -1304,9 +1346,12 @@ class Interface(QtWidgets.QMainWindow):
                             break
                     except Exception:
                         pass
-                if (i & 31) == 31:
+                if (i & 7) == 7:
                     try: _gc.collect()
                     except Exception: pass
+                # Small throttle to reduce CPU pressure
+                try: _t.sleep(0.002)
+                except Exception: pass
             try:
                 if client is not None:
                     client.close()
