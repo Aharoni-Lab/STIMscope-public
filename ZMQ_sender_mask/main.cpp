@@ -4,7 +4,7 @@
 //
 // Build: g++ -O2 -std=c++17 main.cpp -o projector -lglfw -lGL -lzmq -lgpiod -lpthread
 
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <gpiod.h>
 #include <zmq.hpp>
@@ -27,6 +27,20 @@
 #include <unordered_map>
 #include <vector>
 #include <cmath>
+
+#ifdef __linux__
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+// We will include EGL/GBM headers guarded to avoid breaking builds without them
+#endif
+
+// DRM/EGL stubs must be declared before usage
+struct DrmBackend { int fd; void* gbm_dev; void* gbm_surf; void* egl_disp; void* egl_ctx; void* egl_surf; bool ok; };
+static DrmBackend g_drm = { -1, nullptr, nullptr, nullptr, nullptr, nullptr, false };
+static bool drm_init_and_make_current(int width, int height){ (void)width; (void)height; return false; }
+static void drm_swap_buffers(){ }
+static void drm_shutdown(){ }
 
 #define WIDTH  1920
 #define HEIGHT 1080
@@ -64,7 +78,10 @@ static int         LATENCY_FRAMES = 1;
 static std::string ZMQ_BIND       = "tcp://*:5558";
 static int         SWAP_INTERVAL  = 1;        // 0 no vsync, 1 vsync
 static int         MONITOR_PICK   = 1;        // -1 pick rightmost, else exact index
+// removed desired refresh override
 static bool        VISIBLE_ID     = true;     // draw overlay
+static int         FORCE_IMMEDIATE= 0;        // 1 = push masks to ready_q immediately
+static std::string DISPLAY_BACKEND = "glfw";  // glfw | drm
 
 // overlay options
 // OVERLAY_STYLE: 0 barcode, 1 digits
@@ -146,11 +163,93 @@ static std::atomic<uint64_t> last_matched_proj_for_cam{0};
 
 // running draw counter, starts at 1 and increments each drawn frame
 static std::atomic<uint64_t> draw_counter{0};
+// Timing breakdown (microseconds) for diagnostics
+static std::atomic<long long> g_t_map_us{0};
+static std::atomic<long long> g_t_upload_us{0};
+static std::atomic<long long> g_t_draw_us{0};
+static std::atomic<long long> g_t_swap_us{0};
 
 // notify main thread to draw a specific id and annotate with the pidx it will target (next frame)
 static std::atomic<int>      pending_draw_id{-1};
 static std::atomic<uint64_t> pending_draw_proj_idx{0};
 static GLFWwindow*           g_win = nullptr;
+static std::atomic<int>     g_active_swap_interval{-1}; // -1 unknown, 0 no-vsync, 1 vsync
+
+// ---------- GPU warp (shader) resources ----------
+// Minimal shader-based H-warp for masks; enabled only when H is active
+static GLuint g_gpu_prog = 0;
+static GLuint g_gpu_vbo  = 0;
+static GLuint g_gpu_vao  = 0;   // VAO is optional in compatibility profile; guarded
+static GLuint g_mask_tex = 0;   // 8-bit single-channel
+static GLuint g_ov_tex   = 0;   // overlay full-frame texture (optional)
+static GLuint g_zero_tex = 0;   // 1x1 zero texture for overlay-only pass
+static GLuint g_lut_tex    = 0;   // LUT packed (RG16F), normalized bottom-left
+static GLint  g_loc_uMask  = -1;
+static GLint  g_loc_uHinv  = -1;
+static GLint  g_loc_uSize  = -1;
+static GLint  g_loc_uFlipX = -1;
+static GLint  g_loc_uOverlay = -1;
+static GLint  g_loc_uUseOverlay = -1;
+static GLint  g_loc_uLut   = -1;
+static GLint  g_loc_aPos   = -1;
+static bool   g_gpu_ready  = false;
+// PBO double-buffering for async uploads
+static GLuint g_pbos[3] = {0, 0, 0};
+static int    g_pbo_index = 0;
+static int    g_pbo_count = 0;
+static bool   g_pbo_ready = false;
+static bool   g_pbo_persistent = false;    // ARB_buffer_storage path
+static void*  g_pbo_mapped[3] = {nullptr, nullptr, nullptr};
+static GLsync g_pbo_fence[3]  = {0, 0, 0};
+// Host-side LUT (normalized UV, bottom-left), size = WIDTH*HEIGHT*2 floats
+static std::vector<float> g_lut_u_host;
+static std::vector<float> g_lut_v_host;
+static std::atomic<bool>  g_lut_dirty{false};
+static int                g_use_lut = 0;  // 0 = compute H in shader, 1 = sample LUT
+// Half-float packed LUTs for reduced bandwidth uploads
+static std::vector<uint16_t> g_lut_u_half;
+static std::vector<uint16_t> g_lut_v_half;
+
+// Convert 32-bit float to IEEE-754 binary16 (round-to-nearest-even)
+static inline uint16_t float_to_half(float f){
+    union { uint32_t u; float f; } v; v.f = f;
+    uint32_t sign = (v.u >> 31) & 0x1;
+    int32_t  exp  = int32_t((v.u >> 23) & 0xFF) - 127 + 15; // re-bias
+    uint32_t frac = v.u & 0x7FFFFF;
+    uint16_t out;
+    if (exp <= 0){
+        if (exp < -10){
+            out = uint16_t(sign << 15); // underflow to zero
+        } else {
+            // subnormal
+            frac |= 0x800000u;
+            int shift = (14 - exp);
+            uint32_t mant = frac >> (shift + 13);
+            // round
+            uint32_t round_bit = (frac >> (shift + 12)) & 1u;
+            mant += round_bit & ((mant & 1u) | ((frac & ((1u << (shift + 12)) - 1u)) != 0));
+            out = uint16_t((sign << 15) | mant);
+        }
+    } else if (exp >= 31){
+        // Inf/NaN
+        out = uint16_t((sign << 15) | (0x1Fu << 10));
+    } else {
+        uint32_t mant = frac >> 13;
+        // round to nearest even
+        uint32_t round_bit = (frac >> 12) & 1u;
+        mant += round_bit & ((mant & 1u) | (frac & 0xFFFu));
+        if (mant == 0x400u){ // mant overflow
+            mant = 0;
+            exp += 1;
+            if (exp >= 31){ out = uint16_t((sign << 15) | (0x1Fu << 10)); return out; }
+        }
+        out = uint16_t((sign << 15) | (uint16_t(exp) << 10) | (mant & 0x3FFu));
+    }
+    return out;
+}
+
+// Keep a copy of H inverse for GPU uniform
+static double g_Hinv[9] = {1,0,0, 0,1,0, 0,0,1};
 
 // Mask cache, keyed by id
 struct MaskCache {
@@ -204,6 +303,365 @@ static void draw_mask_pixels(const void* data, int w, int h){
     glPixelZoom(1.0f, -1.0f);               // flip vertical, top left origin masks
     glRasterPos2f(-1.f, 1.f);               // top left
     glDrawPixels(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+}
+
+// Forward declare PBO init for use in draw_mask_pixels_pbo
+static void ensure_pbo_buffers();
+
+static void draw_mask_pixels_pbo(const unsigned char* data, int w, int h){
+    ensure_pbo_buffers();
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_DITHER);
+    glViewport(0, 0, w, h);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // Triple-buffered PBO upload and glDrawPixels from PBO
+    g_pbo_index = (g_pbo_index + 1) % 3;
+    const int map_idx = g_pbo_index;
+    const int upload_idx = (g_pbo_index + 2) % 3;
+    const GLsizeiptr sz = (GLsizeiptr)((size_t)w * (size_t)h);
+    // Map 'map_idx' and fill
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[map_idx]);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sz, nullptr, GL_STREAM_DRAW);
+    void* ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+    if (ptr && data){ std::memcpy(ptr, data, (size_t)sz); }
+    glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+    // Choose which PBO to draw from
+    int use_idx = (g_pbo_count >= 2) ? upload_idx : map_idx;
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[use_idx]);
+    glRasterPos2f(-1.f, 1.f);               // top-left
+    glPixelZoom(1.0f, -1.0f);               // flip vertical to match top-left origin
+    glDrawPixels(w, h, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const void*)0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    if (g_pbo_count < 3) g_pbo_count++;
+}
+
+// --- GPU helpers ---
+static GLuint compile_shader(GLenum type, const char* src){
+    GLuint s = glCreateShader(type);
+    glShaderSource(s, 1, &src, nullptr);
+    glCompileShader(s);
+    GLint ok = 0; glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
+    if (!ok){
+        char log[1024]; GLsizei n=0; glGetShaderInfoLog(s, sizeof(log)-1, &n, log); log[n]=0;
+        LOG("[GPU ] shader compile error: ", log, "\n");
+        glDeleteShader(s); return 0;
+    }
+    return s;
+}
+
+static GLuint link_program(GLuint vs, GLuint fs){
+    GLuint p = glCreateProgram();
+    glAttachShader(p, vs); glAttachShader(p, fs);
+    glLinkProgram(p);
+    GLint ok = 0; glGetProgramiv(p, GL_LINK_STATUS, &ok);
+    if (!ok){
+        char log[1024]; GLsizei n=0; glGetProgramInfoLog(p, sizeof(log)-1, &n, log); log[n]=0;
+        LOG("[GPU ] program link error: ", log, "\n");
+        glDeleteProgram(p); return 0;
+    }
+    return p;
+}
+
+static void ensure_gpu_pipeline(){
+    if (g_gpu_ready) return;
+    const char* vsrc = R"(
+        #version 120
+        attribute vec2 aPos;
+        varying vec2 vUv;
+        void main(){
+            vUv = (aPos + vec2(1.0,1.0)) * 0.5; // NDC [-1,1] -> [0,1]
+            gl_Position = vec4(aPos, 0.0, 1.0);
+        }
+    )";
+    const char* fsrc = R"(
+        #version 120
+        uniform sampler2D uMask;
+        uniform sampler2D uLut; // RG16F: .r = u, .g = v
+        uniform vec2 uSize; // (W, H)
+        uniform mat3 uHinv; // optional direct homography
+        uniform int  uUseLut; // 1: LUT path, 0: analytic H
+        void main(){
+            // Compute LUT sampling coords from window-space fragment, matching CPU's top-left indexing
+            float W = uSize.x;
+            float H = uSize.y;
+            vec2 frag = gl_FragCoord.xy;
+            vec2 uvLut = vec2( (frag.x - 0.5) / W, 1.0 - (frag.y - 0.5) / H );
+            float u = -1.0;
+            float v = -1.0;
+            if (uUseLut == 1){
+                vec2 uvp = texture2D(uLut, uvLut).rg;
+                u = uvp.r;
+                v = uvp.g;
+            } else {
+                // Analytic homography: map display pixel to source
+                float xd = frag.x - 0.5;
+                float yd = (H - frag.y) - 0.5; // top-left origin
+                vec3 Xd = vec3(xd, yd, 1.0);
+                vec3 Xs = uHinv * Xd;
+                float w = Xs.z != 0.0 ? Xs.z : 1.0;
+                float xs = Xs.x / w;
+                float ys = Xs.y / w;
+                if (xs >= 0.0 && xs <= (W-1.0) && ys >= 0.0 && ys <= (H-1.0)){
+                    u = xs / (W - 1.0);
+                    v = 1.0 - (ys / (H - 1.0));
+                }
+            }
+            if (u < 0.0 || v < 0.0){ gl_FragColor = vec4(0.0); return; }
+            float m = texture2D(uMask, vec2(u, v)).r;
+            gl_FragColor = vec4(m, m, m, 1.0);
+        }
+    )";
+    GLuint vs = compile_shader(GL_VERTEX_SHADER, vsrc);
+    GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fsrc);
+    if (!vs || !fs){ if (vs) glDeleteShader(vs); if (fs) glDeleteShader(fs); return; }
+    g_gpu_prog = link_program(vs, fs);
+    glDeleteShader(vs); glDeleteShader(fs);
+    if (!g_gpu_prog) return;
+
+    // Fullscreen quad (two tris) via triangle strip or just two triangles
+    const GLfloat verts[8] = { -1.f,-1.f,  1.f,-1.f,  -1.f, 1.f,  1.f, 1.f };
+    glGenBuffers(1, &g_gpu_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, g_gpu_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+    // Attribute binding (no VAO in old GL required)
+    g_loc_aPos = glGetAttribLocation(g_gpu_prog, "aPos");
+    glEnableVertexAttribArray((GLuint)g_loc_aPos);
+    glVertexAttribPointer((GLuint)g_loc_aPos, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+    // Texture: mask (single-channel 8-bit)
+    glGenTextures(1, &g_mask_tex);
+    glBindTexture(GL_TEXTURE_2D, g_mask_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    // Allocate once
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, WIDTH, HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+    // LUT texture: packed RG16F (u in .r, v in .g)
+    glGenTextures(1, &g_lut_tex);
+    glBindTexture(GL_TEXTURE_2D, g_lut_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, WIDTH, HEIGHT, 0, GL_RG, GL_HALF_FLOAT, nullptr);
+
+    glGenTextures(1, &g_ov_tex);
+    glBindTexture(GL_TEXTURE_2D, g_ov_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, WIDTH, HEIGHT, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, nullptr);
+    // 1x1 zero texture
+    glGenTextures(1, &g_zero_tex);
+    glBindTexture(GL_TEXTURE_2D, g_zero_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    unsigned char zero = 0;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, 1, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &zero);
+
+    g_loc_uMask  = glGetUniformLocation(g_gpu_prog, "uMask");
+    g_loc_uHinv  = glGetUniformLocation(g_gpu_prog, "uHinv");
+    g_loc_uSize  = glGetUniformLocation(g_gpu_prog, "uSize");
+    g_loc_uFlipX = glGetUniformLocation(g_gpu_prog, "uFlipX");
+    g_loc_uLut   = glGetUniformLocation(g_gpu_prog, "uLut");
+    g_loc_uOverlay    = glGetUniformLocation(g_gpu_prog, "uOverlay");
+    g_loc_uUseOverlay = glGetUniformLocation(g_gpu_prog, "uUseOverlay");
+    // For LUT-based shader, require mask, LUT, size and aPos
+    g_gpu_ready = (g_loc_uMask>=0 && g_loc_uLut>=0 && g_loc_uSize>=0 && g_loc_aPos>=0);
+    if (g_gpu_ready) LOG("[GPU ] pipeline ready (uMask=", g_loc_uMask, ", uLut=", g_loc_uLut, ", uSize=", g_loc_uSize, ")\n");
+
+    // Bind static sampler units once and bind LUT texture
+    glUseProgram(g_gpu_prog);
+    if (g_loc_uMask >= 0) glUniform1i(g_loc_uMask, 0);
+    if (g_loc_uLut  >= 0) glUniform1i(g_loc_uLut, 2);
+    if (g_loc_uHinv >= 0){
+        GLfloat Hinvf[9]; for (int k=0;k<9;++k) Hinvf[k] = (GLfloat)g_Hinv[k];
+        glUniformMatrix3fv(g_loc_uHinv, 1, GL_TRUE, Hinvf);
+    }
+    GLint loc_use = glGetUniformLocation(g_gpu_prog, "uUseLut");
+    if (loc_use >= 0) glUniform1i(loc_use, g_use_lut ? 1 : 0);
+    if (g_loc_uLut >= 0)  glUniform1i(g_loc_uLut, 2);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, g_lut_tex);
+}
+
+static void ensure_pbo_buffers(){
+    if (g_pbo_ready) return;
+    glGenBuffers(3, g_pbos);
+    const GLsizeiptr sz = (GLsizeiptr)((size_t)WIDTH * (size_t)HEIGHT);
+    if (GLEW_ARB_buffer_storage){
+        const GLbitfield storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+        const GLbitfield map_flags     = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+        bool ok = true;
+        for (int i = 0; i < 3; ++i){
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[i]);
+            glBufferStorage(GL_PIXEL_UNPACK_BUFFER, sz, nullptr, storage_flags);
+            void* p = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sz, map_flags);
+            if (!p){ ok = false; break; }
+            g_pbo_mapped[i] = p;
+        }
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        if (ok){
+            g_pbo_persistent = true;
+            g_pbo_ready = true;
+            LOG("[GPU ] PBOs ready (persistent mapped, ", (int)sz, " bytes each)\n");
+            return;
+        } else {
+            for (int i = 0; i < 3; ++i){ g_pbo_mapped[i] = nullptr; }
+            g_pbo_persistent = false;
+        }
+    }
+    for (int i = 0; i < 3; ++i){
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[i]);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, sz, nullptr, GL_STREAM_DRAW);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    }
+    g_pbo_ready = true;
+    LOG("[GPU ] PBOs ready (streaming, ", (int)sz, " bytes each)\n");
+}
+
+static bool draw_mask_gpu(const unsigned char* data,
+                          const unsigned char* ov_px,
+                          int ov_w, int ov_h,
+                          int offX, int offY){
+    if (!g_h_ready.load()) return false; // only when H active
+    ensure_gpu_pipeline();
+    ensure_pbo_buffers();
+    if (!g_gpu_ready){
+        static bool once = false;
+        if (!once){
+            LOG("[GPU ] not ready: uMask=", g_loc_uMask, " uLut=", g_loc_uLut,
+                " uSize=", g_loc_uSize, " aPos=", g_loc_aPos, "\n");
+            once = true;
+        }
+        return false;
+    }
+    // Upload LUT if dirty (packed RG16F)
+    if (g_lut_dirty.load()){
+        const size_t N = g_lut_u_host.size();
+        if (g_lut_u_half.size() != N*2) g_lut_u_half.resize(N*2);
+        // pack as RG: [u_half, v_half]
+        for (size_t i = 0; i < N; ++i){
+            uint16_t uh = float_to_half(g_lut_u_host[i]);
+            uint16_t vh = float_to_half(g_lut_v_host[i]);
+            g_lut_u_half[2*i+0] = uh;
+            g_lut_u_half[2*i+1] = vh;
+        }
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, g_lut_tex);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, WIDTH, HEIGHT, GL_RG, GL_HALF_FLOAT, g_lut_u_half.data());
+        g_lut_dirty.store(false);
+        static bool once = false; if (!once){ LOG("[GPU ] LUT uploaded (RG16F)\n"); once = true; }
+    }
+    // Ensure LUT texture is bound to the declared unit every frame when used
+    if (g_use_lut){
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, g_lut_tex);
+    }
+    glDisable(GL_DEPTH_TEST); glDisable(GL_BLEND); glDisable(GL_DITHER);
+    glViewport(0, 0, WIDTH, HEIGHT);
+    glUseProgram(g_gpu_prog);
+    // upload/update texture via PBO (async)
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_mask_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // ping-pong PBOs
+    g_pbo_index = (g_pbo_index + 1) % 3;
+    const int next = g_pbo_index;
+    const int cur  = (g_pbo_index + 2) % 3; // previous-filled buffer
+    const GLsizeiptr sz = (GLsizeiptr)((size_t)WIDTH * (size_t)HEIGHT);
+    // Map next PBO and copy CPU bytes into it, then composite overlay onto it
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[next]);
+    long long t0 = now_ns();
+    void* ptr = nullptr;
+    if (g_pbo_persistent){
+        // Wait for GPU to be done with this buffer if we previously queued it
+        if (g_pbo_fence[next]){
+            GLenum wait = glClientWaitSync(g_pbo_fence[next], 0, 0);
+            if (wait == GL_TIMEOUT_EXPIRED){
+                glWaitSync(g_pbo_fence[next], 0, GL_TIMEOUT_IGNORED);
+            }
+            glDeleteSync(g_pbo_fence[next]);
+            g_pbo_fence[next] = 0;
+        }
+        ptr = g_pbo_mapped[next];
+    } else {
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, sz, nullptr, GL_STREAM_DRAW); // orphan
+        ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+    }
+    long long t_map = now_ns();
+    if (ptr && data){
+        std::memcpy(ptr, data, (size_t)sz);
+        if (ov_px && ov_w > 0 && ov_h > 0){
+            unsigned char* base = static_cast<unsigned char*>(ptr);
+            if (OVERLAY_BG){
+                for (int y = 0; y < ov_h; ++y){
+                    int dy = offY + y;
+                    if (dy < 0 || dy >= HEIGHT) continue;
+                    int dx0 = offX;
+                    int run = ov_w;
+                    if (dx0 < 0){ run += dx0; dx0 = 0; }
+                    if (dx0 + run > WIDTH){ run = WIDTH - dx0; }
+                    if (run <= 0) continue;
+                    unsigned char* dst = base + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
+                    std::memset(dst, 0, (size_t)run);
+                }
+            }
+            for (int y = 0; y < ov_h; ++y){
+                int dy = offY + y;
+                if (dy < 0 || dy >= HEIGHT) continue;
+                int sx0 = 0;
+                int dx0 = offX;
+                int run = ov_w;
+                if (dx0 < 0){ sx0 -= dx0; run += dx0; dx0 = 0; }
+                if (dx0 + run > WIDTH){ run = WIDTH - dx0; }
+                if (run <= 0) continue;
+                const unsigned char* src = ov_px + (size_t)y * (size_t)ov_w + (size_t)sx0;
+                unsigned char* dst = base + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
+                for (int i = 0; i < run; ++i){ if (src[i] > dst[i]) dst[i] = src[i]; }
+            }
+        }
+    }
+    if (!g_pbo_persistent){
+        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+    }
+    long long t_after_map = now_ns();
+    // Issue tex upload from current PBO (previous frame's data on first use it's fine)
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_pbos[cur]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, WIDTH, HEIGHT, GL_RED, GL_UNSIGNED_BYTE, (const void*)0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    if (g_pbo_persistent){
+        // Fence the buffer we just gave to GL (cur)
+        if (g_pbo_fence[cur]){ glDeleteSync(g_pbo_fence[cur]); g_pbo_fence[cur] = 0; }
+        g_pbo_fence[cur] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    }
+    long long t_after_upload = now_ns();
+    if (g_loc_uMask >= 0) glUniform1i(g_loc_uMask, 0);
+    // pass Hinv (row-major) as mat3
+    GLfloat Hinvf[9]; for (int k=0;k<9;++k) Hinvf[k] = (GLfloat)g_Hinv[k];
+    // Tell GL to transpose from row-major array to column-major mat3
+    if (g_loc_uHinv >= 0)   glUniformMatrix3fv(g_loc_uHinv, 1, GL_TRUE, Hinvf);
+    if (g_loc_uSize >= 0)   glUniform2f(g_loc_uSize, (GLfloat)WIDTH, (GLfloat)HEIGHT);
+    if (g_loc_uFlipX >= 0)  glUniform1i(g_loc_uFlipX, HORIZ_FLIP?1:0);
+    // draw
+    glEnableVertexAttribArray((GLuint)g_loc_aPos);
+    glBindBuffer(GL_ARRAY_BUFFER, g_gpu_vbo);
+    glVertexAttribPointer((GLuint)g_loc_aPos, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    long long t_after_draw = now_ns();
+    g_t_map_us.store((t_map - t0)/1000);
+    g_t_upload_us.store((t_after_upload - t_after_map)/1000);
+    g_t_draw_us.store((t_after_draw - t_after_upload)/1000);
+    return true;
 }
 
 // ---------- homography helpers ----------
@@ -266,6 +724,31 @@ static void precompute_h_map_unlocked(){
         }
     }
     g_h_ready.store(true);
+    // Also compute H inverse (row-major) for GPU uniform
+    for (int k = 0; k < 9; ++k) g_Hinv[k] = Hin[k];
+    // Build LUT host buffers (normalized bottom-left UV)
+    try {
+        g_lut_u_host.resize((size_t)WIDTH * (size_t)HEIGHT);
+        g_lut_v_host.resize((size_t)WIDTH * (size_t)HEIGHT);
+        size_t valid = 0;
+        for (int y = 0; y < HEIGHT; ++y){
+            for (int x = 0; x < WIDTH; ++x){
+                size_t idx = (size_t)y * (size_t)WIDTH + (size_t)x;
+                float fx = (idx < g_h_src_fx.size()) ? g_h_src_fx[idx] : -1.0f;
+                float fy = (idx < g_h_src_fy.size()) ? g_h_src_fy[idx] : -1.0f;
+                float u = -1.0f, v = -1.0f;
+                if (fx >= 0.0f && fy >= 0.0f){
+                    u = fx / (float)(WIDTH - 1);
+                    v = 1.0f - (fy / (float)(HEIGHT - 1));
+                    valid++;
+                }
+                g_lut_u_host[idx] = u;
+                g_lut_v_host[idx] = v;
+            }
+        }
+        g_lut_dirty.store(true);
+        LOG("[HMAP] LUT valid=", (long long)valid, " / ", (long long)g_lut_u_host.size(), "\n");
+    } catch(...) {}
     LOG("[HMAP] precomputed mapping (", W, "x", Ht, ")\n");
 }
 
@@ -367,11 +850,23 @@ static void draw_digit_3x5(std::vector<unsigned char>& out, int ow,
                            int px, int py, int cell, int d, unsigned char v){
     if (d < 0 || d > 9) return;
     uint16_t pat = DIGIT_3x5[d];
+    // Draw per row using runs to minimize memset calls
     for (int r = 0; r < 5; ++r){
-        for (int c = 0; c < 3; ++c){
-            int bit = r * 3 + c;
-            if ((pat >> bit) & 1){
-                blit_rect(out, ow, px + c*cell, py + r*cell, cell, cell, v);
+        // Extract 3 bits for this row
+        int row_bits = (pat >> (r * 3)) & 0x7; // bits [0..2]
+        int c = 0;
+        while (c < 3){
+            if (((row_bits >> c) & 1) == 0){
+                ++c; continue;
+            }
+            int c0 = c;
+            while (c < 3 && ((row_bits >> c) & 1)) ++c;
+            int run_cells = c - c0; // 1..3
+            int x0 = px + c0 * cell;
+            int w  = run_cells * cell;
+            // Fill a run rectangle of width w and height cell
+            for (int yy = 0; yy < cell; ++yy){
+                std::memset(&out[(py + r*cell + yy) * ow + x0], v, w);
             }
         }
     }
@@ -693,7 +1188,7 @@ static void zmq_thread_func(){
         latest_mask_id.store(id);
 
         // If client requests immediate scheduling (pattern mode), enqueue for next projector frame
-        bool immediate = parse_flag_from_json(meta, "immediate");
+        bool immediate = parse_flag_from_json(meta, "immediate") || (FORCE_IMMEDIATE != 0);
         if (immediate){
             // Clear stale queued ids to reduce latency/jitter for burst pattern streams
             {
@@ -972,6 +1467,8 @@ static void parse_cli(int argc, char** argv){
         else if (starts("--h-bind="))           ZMQ_H_BIND       = trim(a.substr(9));
         else if (starts("--horiz-flip="))       HORIZ_FLIP       = safe_stoi(a.substr(13), HORIZ_FLIP, "horiz-flip");
         else if (starts("--h-file="))           H_FILE_PATH      = trim(a.substr(9));
+        else if (starts("--force-immediate="))  FORCE_IMMEDIATE  = safe_stoi(a.substr(18), FORCE_IMMEDIATE, "force-immediate");
+        else if (starts("--display="))          DISPLAY_BACKEND  = trim(a.substr(10));
 
         else if (a=="-h" || a=="--help"){
             std::cout <<
@@ -1017,7 +1514,9 @@ static void parse_cli(int argc, char** argv){
         " , map-csv=", MAP_CSV_PATH,
         " , cam-warmup=", CAM_WARMUP,
         " , h-bind=", ZMQ_H_BIND,
-        " , horiz-flip=", HORIZ_FLIP, "\n");
+        " , horiz-flip=", HORIZ_FLIP,
+        " , force-immediate=", FORCE_IMMEDIATE,
+        " , display=", DISPLAY_BACKEND, "\n");
 }
 
 // ---------- monitor pick ----------
@@ -1039,6 +1538,8 @@ static GLFWmonitor* pick_monitor(){
     return mons[best];
 }
 
+// removed pick_best_mode
+
 // ---------- signal ----------
 static void on_sig(int){ g_running.store(false); if (g_win) glfwPostEmptyEvent(); }
 
@@ -1057,188 +1558,192 @@ int main(int argc, char** argv){
     std::thread th_cam(camera_thread_func);
     std::thread th_proj(projector_thread_func);
 
-    // GLFW setup and window
-    if (!glfwInit()){ std::cerr << "GLFW init failed\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); return 1; }
-    std::signal(SIGINT,  on_sig);
-    std::signal(SIGTERM, on_sig);
+    // Choose display backend
+    bool use_drm = (DISPLAY_BACKEND == "drm");
 
-    GLFWmonitor* proj = pick_monitor();
-    if (!proj){ std::cerr << "No monitor found\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
+    if (!use_drm){
+        // GLFW setup and window
+        if (!glfwInit()){ std::cerr << "GLFW init failed\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); return 1; }
+        std::signal(SIGINT,  on_sig);
+        std::signal(SIGTERM, on_sig);
 
-    int mx=0,my=0; glfwGetMonitorPos(proj, &mx, &my);
-    const GLFWvidmode* mode = glfwGetVideoMode(proj);
-    if (!mode){ std::cerr << "No video mode\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
-    LOG("Using monitor at +", mx, "+", my, " (", mode->width, "x", mode->height, "@", mode->refreshRate, "Hz)\n");
+        GLFWmonitor* proj = pick_monitor();
+        if (!proj){ std::cerr << "No monitor found\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
 
-    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
-    glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
-    glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+        int mx=0,my=0; glfwGetMonitorPos(proj, &mx, &my);
+        const GLFWvidmode* mode = glfwGetVideoMode(proj);
+        if (!mode){ std::cerr << "No video mode\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
+        LOG("Using monitor at +", mx, "+", my, " (", mode->width, "x", mode->height, "@", mode->refreshRate, "Hz)\n");
 
-    g_win = glfwCreateWindow(mode->width, mode->height, "Mask Projection", nullptr, nullptr);
-    if (!g_win){ std::cerr << "Window creation failed\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
-    glfwSetWindowPos(g_win, mx, my);
-    glfwShowWindow(g_win);
-    glfwMakeContextCurrent(g_win);
-    glfwSwapInterval(SWAP_INTERVAL);
-
-    // warm up with black so WM maps the window (FULLSCREEN content, no decorations)
-    {
-        std::vector<unsigned char> black(WIDTH * HEIGHT, 0);
-        for (int i=0;i<2;++i){
-            draw_mask_pixels(black.data(), WIDTH, HEIGHT);
-            glfwSwapBuffers(g_win);
-            glfwPollEvents();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+        glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+        glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+        glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+        // Windowed on projector (avoid compositor-exclusive fullscreen issues)
+        g_win = glfwCreateWindow(mode->width, mode->height, "Mask Projection", nullptr, nullptr);
+        if (!g_win){ std::cerr << "Window creation failed\n"; g_running.store(false); th_proj.join(); th_cam.join(); th_zmq.join(); glfwTerminate(); return 1; }
+        // Position to projector monitor
+        glfwSetWindowPos(g_win, mx, my);
+        glfwShowWindow(g_win);
+        glfwMakeContextCurrent(g_win);
+        // Initialize GLEW for modern GL entry points used by the GPU shader path
+        {
+            GLenum err = glewInit();
+            if (err != GLEW_OK){ std::cerr << "GLEW init failed: " << (const char*)glewGetErrorString(err) << "\n"; }
+            // glewInit can set GL error; clear it
+            while (glGetError() != GL_NO_ERROR) {}
         }
-    }
+        glfwSwapInterval(SWAP_INTERVAL);
+        g_active_swap_interval.store(SWAP_INTERVAL);
 
-    const size_t expected_bytes = size_t(WIDTH) * size_t(HEIGHT);
-
-    // Main loop, render when projector thread posts a pending id
-    while (g_running.load() && !glfwWindowShouldClose(g_win)){
-        glfwWaitEventsTimeout(0.1);
-
-        if (glfwGetWindowAttrib(g_win, GLFW_ICONIFIED)){
-            glfwRestoreWindow(g_win);
-            glfwSetWindowPos(g_win, mx, my);
+        // warm up with black so WM maps the window (ensure projector shows black)
+        {
+            std::vector<unsigned char> black(WIDTH * HEIGHT, 0);
+            for (int i=0;i<2;++i){
+                draw_mask_pixels(black.data(), WIDTH, HEIGHT);
+                glfwSwapBuffers(g_win);
+                glfwPollEvents();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
         }
 
-        int id = pending_draw_id.exchange(-1);
-        if (id >= 0){
-            const unsigned char* ptr = nullptr; size_t n = 0;
-            if (g_cache.get(id, ptr, n) && n == expected_bytes){
-                auto t_before = now_ns();
-                // Apply homography mapping if available
-                static std::vector<unsigned char> warped;
-                bool use_h = g_h_ready.load();
-                if (use_h){
-                    if (WARP_BILINEAR) warp_mask_bilinear(ptr, warped);
-                    else warp_mask_nn(ptr, warped);
-                }
+        const size_t expected_bytes = size_t(WIDTH) * size_t(HEIGHT);
 
-                // Prepare overlay buffers; draw timing depends on use_h
-                int ov_w = 0, ov_h = 0;
-                static std::vector<unsigned char> ov;
-                bool overlay_built = false;
+        // Main loop, render when projector thread posts a pending id
+        while (g_running.load() && !glfwWindowShouldClose(g_win)){
+            // Avoid idling when a draw is pending; else allow brief wait for events
+            if (pending_draw_id.load() >= 0){
+                glfwPollEvents();
+            } else {
+                glfwWaitEventsTimeout(0.01);
+            }
 
-                if (VISIBLE_ID){
-                    // top row: running counter starting at 1
-                    uint64_t ctr = draw_counter.fetch_add(1) + 1;
+            if (glfwGetWindowAttrib(g_win, GLFW_ICONIFIED)){
+                glfwRestoreWindow(g_win);
+                glfwSetWindowPos(g_win, mx, my);
+            }
 
-                    // bottom row: per setting
-                    std::string bottom;
-                    if (OVERLAY_BOTTOM_MODE == 0) {
-                        // Show mapping label with clear spacing: mask_id    cam_idx    proj_idx
-                        // Note: draw_number_row only renders digits and spaces; separators like ':' or '@' are not drawn.
-                        long long cam_idx = (long long)last_cam_idx.load() - CAM_WARMUP;
-                        uint64_t proj_idx = last_matched_proj_for_cam.load();
-                        bottom = std::to_string(std::max(0, id)) + "    " + std::to_string(cam_idx) + "    " + std::to_string(proj_idx);
-                    } else if (OVERLAY_BOTTOM_MODE == 1) {
-                        bottom = std::to_string(pending_draw_proj_idx.load()); // target projector idx
-                    } else {
-                        bottom = "";
+            int id = pending_draw_id.exchange(-1);
+            if (id >= 0){
+                const unsigned char* ptr = nullptr; size_t n = 0;
+                if (g_cache.get(id, ptr, n) && n == expected_bytes){
+                    auto t_before = now_ns();
+                    // Apply homography mapping if available
+                    static std::vector<unsigned char> warped;
+                    bool use_h = g_h_ready.load();
+                    if (use_h){
+                        if (WARP_BILINEAR) warp_mask_bilinear(ptr, warped);
+                        else warp_mask_nn(ptr, warped);
                     }
 
-                    if (OVERLAY_STYLE == 1){
-                        build_overlay_digits(ctr, bottom, OVERLAY_CELL, ov, ov_w, ov_h);
-                    } else {
-                        uint64_t pidx_full = pending_draw_proj_idx.load();
-                        uint8_t id8 = uint8_t(std::max(0, id) & 0xFF);
-                        uint8_t p8  = uint8_t(pidx_full & 0xFF);
-                        uint8_t hb8 = uint8_t((pidx_full >> 8) & 0xFF);
-                        build_overlay_barcode(id8, p8, hb8, OVERLAY_CELL, ov, ov_w, ov_h);
+                    // Prepare overlay buffers; draw timing depends on use_h
+                    int ov_w = 0, ov_h = 0;
+                    static std::vector<unsigned char> ov;
+                    bool overlay_built = false;
+
+                    if (VISIBLE_ID){
+                        // top row: running counter starting at 1
+                        uint64_t ctr = draw_counter.fetch_add(1) + 1;
+
+                        // bottom row: per setting
+                        std::string bottom;
+                        if (OVERLAY_BOTTOM_MODE == 0) {
+                            // Show mapping label with clear spacing: mask_id    cam_idx    proj_idx
+                            // Note: draw_number_row only renders digits and spaces; separators like ':' or '@' are not drawn.
+                            long long cam_idx = (long long)last_cam_idx.load() - CAM_WARMUP;
+                            uint64_t proj_idx = last_matched_proj_for_cam.load();
+                            bottom = std::to_string(std::max(0, id)) + "    " + std::to_string(cam_idx) + "    " + std::to_string(proj_idx);
+                        } else if (OVERLAY_BOTTOM_MODE == 1) {
+                            bottom = std::to_string(pending_draw_proj_idx.load()); // target projector idx
+                        } else {
+                            bottom = "";
+                        }
+
+                        if (OVERLAY_STYLE == 1){
+                            build_overlay_digits(ctr, bottom, OVERLAY_CELL, ov, ov_w, ov_h);
+                        } else {
+                            uint64_t pidx_full = pending_draw_proj_idx.load();
+                            uint8_t id8 = uint8_t(std::max(0, id) & 0xFF);
+                            uint8_t p8  = uint8_t(pidx_full & 0xFF);
+                            uint8_t hb8 = uint8_t((pidx_full >> 8) & 0xFF);
+                            build_overlay_barcode(id8, p8, hb8, OVERLAY_CELL, ov, ov_w, ov_h);
+                        }
+
+                        if (use_h){
+                            // Skip CPU overlay prewarp/composite; GPU path will handle overlay
+                        } else {
+                            overlay_built = true; // defer GL overlay until after base mask draw
+                        }
                     }
 
                     if (use_h){
-                        // Prewarp overlay using same mapping
-                        static std::vector<unsigned char> ov_full;  // source-space full overlay
-                        static std::vector<unsigned char> ov_warped; // dest-space overlay
-                        static std::vector<unsigned char> plate_src; // source-space plate mask
-                        static std::vector<unsigned char> plate_w;   // dest-space plate mask
-
-                        ov_full.assign((size_t)WIDTH * (size_t)HEIGHT, 0);
-                        blit_onto_fullscreen(ov_full, WIDTH, HEIGHT, ov, ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
-
-                        if (OVERLAY_BG){
-                            plate_src.assign((size_t)WIDTH * (size_t)HEIGHT, 0);
-                            // draw solid rect in source space where overlay sits
-                            int x0 = OVERLAY_OFF_X, y0 = OVERLAY_OFF_Y;
-                            for (int y = 0; y < ov_h; ++y){
-                                int dy = y0 + y; if (dy < 0 || dy >= HEIGHT) continue;
-                                int dx0 = x0; int run = ov_w;
-                                if (dx0 < 0){ run += dx0; dx0 = 0; }
-                                if (dx0 + run > WIDTH){ run = WIDTH - dx0; }
-                                if (run <= 0) continue;
-                                unsigned char* dst = plate_src.data() + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
-                                std::memset(dst, 255, (size_t)run);
-                            }
-                            if (WARP_BILINEAR) warp_mask_bilinear(plate_src.data(), plate_w);
-                            else warp_mask_nn(plate_src.data(), plate_w);
+                        // Force no-vsync when H warp is active to hit <16.7 ms
+                        if (g_active_swap_interval.load() != 0){
+                            glfwSwapInterval(0);
+                            g_active_swap_interval.store(0);
+                        }
+                        // Force GPU LUT warp and log
+                        bool gused = false;
+                        // Prefer LUT (fast) path; shader can also fall back to analytic H
+                        g_use_lut = 1;
+                        if (VISIBLE_ID && ov_w>0 && ov_h>0){
+                            gused = draw_mask_gpu(ptr, ov.data(), ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
                         } else {
-                            plate_w.clear();
+                            gused = draw_mask_gpu(ptr, nullptr, 0, 0, 0, 0);
                         }
-
-                        if (WARP_BILINEAR) warp_mask_bilinear(ov_full.data(), ov_warped);
-                        else warp_mask_nn(ov_full.data(), ov_warped);
-
-                        // Apply black plate in dest space
-                        if (!plate_w.empty()){
-                            const size_t N = (size_t)WIDTH * (size_t)HEIGHT;
-                            for (size_t i = 0; i < N; ++i){
-                                if (plate_w[i]) warped[i] = 0;
-                            }
+                        LOG("[GPU ] ", (gused?"LUT warp used":"CPU warp fallback"), "\n");
+                        if (!gused){
+                            if (WARP_BILINEAR) warp_mask_bilinear(ptr, warped);
+                            else warp_mask_nn(ptr, warped);
+                            draw_mask_pixels(warped.data(), WIDTH, HEIGHT);
                         }
-                        // Composite overlay digits on top (max blend)
-                        {
-                            const size_t N = (size_t)WIDTH * (size_t)HEIGHT;
-                            for (size_t i = 0; i < N; ++i){
-                                unsigned char v = ov_warped[i];
-                                if (v > warped[i]) warped[i] = v;
-                            }
-                        }
+                        // Overlay already composited into the PBO upload when GPU path succeeds
                     } else {
-                        overlay_built = true; // defer GL overlay until after base mask draw
+                        draw_mask_pixels(ptr, WIDTH, HEIGHT);
+                        if (VISIBLE_ID && overlay_built){
+                            draw_overlay_pixels(ov.data(), ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
+                        }
                     }
-                }
+                    long long ts0 = now_ns();
+                    glfwSwapBuffers(g_win);
+                    long long ts1 = now_ns();
+                    g_t_swap_us.store((ts1 - ts0)/1000);
+                    auto t_after = now_ns();
 
-                if (use_h){
-                    draw_mask_pixels(warped.data(), WIDTH, HEIGHT);
+                    // Tell projector thread which id actually swapped (will be visible on the next projector trigger)
+                    g_swapped_q.push(id);
+
+                    LOG("[DRAW] id=", id, " target_pidx+1=", pending_draw_proj_idx.load()+1,
+                        " draw+swap=", (t_after - t_before)/1000000.0,
+                        " ms (map=", g_t_map_us.load(), "us, upload=", g_t_upload_us.load(), "us, draw=", g_t_draw_us.load(), "us, swap=", g_t_swap_us.load(), "us)",
+                        ", swappedQ=", g_swapped_q.size(), "\n");
                 } else {
-                    draw_mask_pixels(ptr, WIDTH, HEIGHT);
-                    if (VISIBLE_ID && overlay_built){
-                        draw_overlay_pixels(ov.data(), ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
-                    }
+                    static std::vector<unsigned char> black(WIDTH*HEIGHT, 0);
+                    draw_mask_pixels(black.data(), WIDTH, HEIGHT);
+                    glfwSwapBuffers(g_win);
+                    g_swapped_q.push(-1);
+                    LOG("[DRAW] id=", id, " not cached, drew black\n");
                 }
-                glfwSwapBuffers(g_win);
-                auto t_after = now_ns();
-
-                // Tell projector thread which id actually swapped (will be visible on the next projector trigger)
-                g_swapped_q.push(id);
-
-                LOG("[DRAW] id=", id, " target_pidx+1=", pending_draw_proj_idx.load()+1,
-                    " draw+swap=", (t_after - t_before)/1000000.0, " ms, swappedQ=", g_swapped_q.size(), "\n");
-            } else {
-                static std::vector<unsigned char> black(WIDTH*HEIGHT, 0);
-                draw_mask_pixels(black.data(), WIDTH, HEIGHT);
-                glfwSwapBuffers(g_win);
-                g_swapped_q.push(-1);
-                LOG("[DRAW] id=", id, " not cached, drew black\n");
             }
         }
+
+        // shutdown
+        g_running.store(false);
+        glfwDestroyWindow(g_win);
+        glfwTerminate();
+
+        th_proj.join();
+        th_cam.join();
+        th_zmq.join();
+        th_h.join();
+
+        LOG("Bye.\n");
+        return 0;
+    } else {
+        LOG("[DRM ] not implemented in this build; use --display=glfw\n");
+        return 0;
     }
 
-    // shutdown
-    g_running.store(false);
-    glfwDestroyWindow(g_win);
-    glfwTerminate();
-
-    th_proj.join();
-    th_cam.join();
-    th_zmq.join();
-    th_h.join();
-
-    LOG("Bye.\n");
-    return 0;
 }

@@ -275,3 +275,4 @@ th_proj.join(); th_cam.join(); th_zmq.join(); th_h.join();
   - **Single-slot `pending_draw_id`** means intermediate IDs can be overwritten if the renderer lags.
 
 
+

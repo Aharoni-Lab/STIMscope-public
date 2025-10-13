@@ -667,6 +667,14 @@ class Interface(QtWidgets.QMainWindow):
             pass
         self._button_troubleshoot.clicked.connect(self._open_troubleshoot_window)
         btn_row.addWidget(self._button_troubleshoot)
+        # Add ASIFT Calibration button to the right of Troubleshooting
+        self._button_asift = QtWidgets.QPushButton("ASIFT Calibration")
+        try:
+            self._button_asift.setToolTip("Compute 3x3 H using Affine-SIFT and apply to projector")
+        except Exception:
+            pass
+        self._button_asift.clicked.connect(self._asift_calibrate)
+        btn_row.addWidget(self._button_asift)
         control_group_layout.addLayout(btn_row, 5, 0, 1, 2)
 
 
@@ -750,7 +758,8 @@ class Interface(QtWidgets.QMainWindow):
             print(f"[PROJ] Building projector in {proj_dir} ...")
             cmd = [
                 "g++", "-O2", "-std=c++17", "main.cpp", "-o", "projector",
-                "-lglfw", "-lGL", "-lzmq", "-lgpiod", "-lpthread"
+                # Link order matters: GLEW before GL on Linux
+                "-lglfw", "-lGLEW", "-lGL", "-lzmq", "-lgpiod", "-lpthread"
             ]
             res = subprocess.run(cmd, cwd=proj_dir, capture_output=True, text=True)
             if res.returncode != 0:
@@ -3197,6 +3206,81 @@ class Interface(QtWidgets.QMainWindow):
             self._camera._send_h_to_projector(H)
         except Exception as e:
             print(f"REQ H-Matrix failed: {e}")
+
+    def _asift_calibrate(self):
+        """Compute 3x3 H via ASIFT (fallback SIFT), update camera H and projector.
+
+        - Loads reference/capture paths from Assets/Generated
+        - Uses ZMQ_sender_mask.asift_calibration backend
+        - Writes homography_cam2proj.txt next to existing files
+        """
+        try:
+            from pathlib import Path
+            import os
+            import numpy as np
+            import cv2
+            # Import backend (ensure repository path is on sys.path or installed)
+            try:
+                from ZMQ_sender_mask.asift_calibration import run_asift_calibration_and_send
+            except Exception as e:
+                # Attempt to add local MyUART workspace to sys.path
+                try:
+                    import sys as _sys
+                    _sys.path.insert(0, "/home/aharonilabjetson2/Desktop/MyScripts/MyUART")
+                    from ZMQ_sender_mask.asift_calibration import run_asift_calibration_and_send
+                except Exception as e2:
+                    print(f"ASIFT backend import failed: {e2}")
+                    return
+
+            assets = Path(__file__).resolve().parent / "Assets" / "Generated"
+            ref_path = (assets / "custom_registration_image.png").as_posix()
+            cam_path = (assets / "calibration_capture_image.png").as_posix()
+            save_txt = (assets / "homography_cam2proj.txt").as_posix()
+
+            ok, H = run_asift_calibration_and_send(ref_path, cam_path, endpoint="tcp://127.0.0.1:5560", save_txt=save_txt)
+            if not ok or H is None:
+                print("ASIFT calibration failed: no H")
+                return
+
+            # Update in-memory camera H so the rest of UI uses the new matrix
+            try:
+                if hasattr(self, "_camera") and (self._camera is not None):
+                    self._camera.translation_matrix = H
+            except Exception:
+                pass
+
+            # Send to projector immediately
+            try:
+                self._camera._send_h_to_projector(H)
+            except Exception as esend:
+                print(f"Could not send ASIFT H to projector: {esend}")
+            print(f"ASIFT Calibration OK. Wrote: {save_txt}")
+
+            # Immediately apply H to the registration image and project it for confirmation
+            try:
+                if not self._ensure_projection():
+                    print("ASIFT confirm: projection window unavailable.")
+                    return
+                img_path = (Path(__file__).resolve().parent / "Assets" / "Generated" / "custom_registration_image.png").as_posix()
+                img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                if img is None:
+                    print(f"ASIFT confirm: cannot read {img_path}")
+                    return
+                # Use current warp mode H; show image with H
+                try:
+                    Hn = H / H[2, 2] if abs(float(H[2, 2])) > 1e-12 else H
+                except Exception:
+                    Hn = H
+                try:
+                    self.projection.show_image_fullscreen_on_second_monitor(img, Hn)
+                except Exception:
+                    # Fallback to interface method
+                    self.on_projection_received(img, Hn)
+                print("ASIFT confirm: projected registration with new H")
+            except Exception as econf:
+                print(f"ASIFT confirm failed: {econf}")
+        except Exception as e:
+            print(f"ASIFT Calibration error: {e}")
 
     def _select_warp_h(self):
         # Toggle behavior: if already active, turn off; else activate H and deactivate LUT
