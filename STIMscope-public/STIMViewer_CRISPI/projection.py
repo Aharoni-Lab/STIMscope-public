@@ -5,6 +5,7 @@ from typing import Optional
 import cv2
 import numpy as np
 from PyQt5.QtCore import Qt, QRect
+import json, os
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QColor
 from PyQt5.QtWidgets import QLabel, QMainWindow
 
@@ -40,6 +41,19 @@ class ProjectDisplay(QMainWindow):
     def __init__(self, screen, parent=None):
         super().__init__(parent)
         self.screen = screen
+        # Load flip config if present
+        self._flip_mode = os.path.join(os.path.dirname(__file__), 'Assets', 'Generated', 'flip_config.json')
+        # Default behavior: preserve prior horizontal flip unless STIM_USE_FLIP_CONFIG=1
+        self._flip_pref = 'horizontal'
+        try:
+            if os.environ.get('STIM_USE_FLIP_CONFIG', '0').strip() == '1':
+                with open(self._flip_mode, 'r') as f:
+                    cfg = json.load(f)
+                    m = str(cfg.get('flip_mode', '')).lower().strip()
+                    if m in ('none','horizontal','vertical','both'):
+                        self._flip_pref = m
+        except Exception:
+            pass
 
 
         self.label = QLabel(self)
@@ -102,9 +116,15 @@ class ProjectDisplay(QMainWindow):
                     borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
                 )
 
-            # Optics compensation: flip horizontally at display stage
+            # Apply configured flip mode (none/horizontal/vertical/both)
             try:
-                img = cv2.flip(img, 1)
+                if self._flip_pref == 'horizontal':
+                    img = cv2.flip(img, 1)
+                elif self._flip_pref == 'vertical':
+                    img = cv2.flip(img, 0)
+                elif self._flip_pref == 'both':
+                    img = cv2.flip(img, -1)
+                # else 'none' → no flip
             except Exception:
                 pass
 

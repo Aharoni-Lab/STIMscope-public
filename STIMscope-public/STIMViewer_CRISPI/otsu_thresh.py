@@ -46,6 +46,7 @@ def load_movie(movie_path: str, dataset_name: Optional[str] = None):
     Supported formats:
       - NumPy (.npy, .npz): returns a numpy memmap/ndarray
       - Video (.avi, .mp4, .mov, .mkv): returns a cv2.VideoCapture stream
+      - TIFF stack (.tif, .tiff, .ome.tif, .ome.tiff): returns a numpy ndarray (N,H,W[,(C)])
 
     Returns
     -------
@@ -66,6 +67,17 @@ def load_movie(movie_path: str, dataset_name: Optional[str] = None):
         if not cap.isOpened():
             raise ValueError(f"Cannot open video file: {movie_path}")
         return cap
+
+    # TIFF stacks
+    if ext in (".tif", ".tiff") or movie_path.lower().endswith(('.ome.tif', '.ome.tiff')):
+        try:
+            import tifffile
+        except Exception as e:
+            raise RuntimeError(f"tifffile required for TIFF input: {e}")
+        arr = tifffile.imread(movie_path)
+        if arr.ndim < 2:
+            raise ValueError(f"Unexpected TIFF shape: {arr.shape}")
+        return arr  # may be (T,H,W) or (T,H,W,C) or (H,W)
 
     raise ValueError(f"Unsupported movie format: {ext}")
 

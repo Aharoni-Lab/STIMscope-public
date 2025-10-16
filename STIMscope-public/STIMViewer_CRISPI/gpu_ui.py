@@ -221,7 +221,7 @@ class GPU(QtWidgets.QWidget):
 
     def _select_video(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Select video file", "", "Video files (*.avi *.mp4 *.h5 *.npy *.npz)"
+            self, "Select video file", "", "Video files (*.avi *.mp4 *.h5 *.npy *.npz *.tif *.tiff *.ome.tif *.ome.tiff)"
         )
         if path:
             self.video_path = path
@@ -339,35 +339,36 @@ class GPU(QtWidgets.QWidget):
 
 
             try:
-                from skimage.color import label2rgb
                 from projection import ProjectDisplay
                 from PyQt5.QtGui import QGuiApplication
 
-                rgb = (label2rgb(labeled, bg_label=0) * 255).astype(np.uint8)
+                # Build binary union mask and display as grayscale (0/255)
+                binary = (labeled > 0).astype(np.uint8)
+                img_gray = (binary * 255).astype(np.uint8)
 
                 screens = QGuiApplication.screens()
                 scr = screens[1] if len(screens) > 1 else screens[0]
                 size = scr.size()
                 tgt_w, tgt_h = size.width(), size.height()
-                h, w = rgb.shape[:2]
+                h, w = img_gray.shape[:2]
                 if h <= tgt_h and w <= tgt_w:
                     pad_top = (tgt_h - h) // 2
                     pad_bottom = tgt_h - h - pad_top
                     pad_left = (tgt_w - w) // 2
                     pad_right = tgt_w - w - pad_left
                     try:
-                        rgb = cv2.copyMakeBorder(
-                            rgb, pad_top, pad_bottom, pad_left, pad_right,
-                            borderType=cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                        img_gray = cv2.copyMakeBorder(
+                            img_gray, pad_top, pad_bottom, pad_left, pad_right,
+                            borderType=cv2.BORDER_CONSTANT, value=0
                         )
                     except Exception:
-                        rgb = np.pad(
-                            rgb,
-                            ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                        img_gray = np.pad(
+                            img_gray,
+                            ((pad_top, pad_bottom), (pad_left, pad_right)),
                             mode='constant', constant_values=0
                         )
                 else:
-                    rgb = cv2.resize(rgb, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
+                    img_gray = cv2.resize(img_gray, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
 
                 if self.proj_display:
                     try:
@@ -377,7 +378,7 @@ class GPU(QtWidgets.QWidget):
                 self.proj_display = ProjectDisplay(scr)
 
                 H = getattr(self.camera, "translation_matrix", None)
-                self.proj_display.show_image_fullscreen_on_second_monitor(rgb, H)
+                self.proj_display.show_image_fullscreen_on_second_monitor(img_gray, H)
                 print("✅ Mask projection displayed")
             except Exception as e:
                 print(f"Failed to project mask: {e}")
@@ -385,7 +386,8 @@ class GPU(QtWidgets.QWidget):
 
             if save_npz_components is not None:
                 masks, sizes, labeled = save_npz_components
-            np.savez_compressed(self.rois_path, masks=masks, sizes=sizes, labels=labeled)
+            binary = (labeled > 0).astype(np.uint8)
+            np.savez_compressed(self.rois_path, masks=masks, sizes=sizes, labels=labeled, binary=binary)
             print(f"ROIs written to {self.rois_path}")
 
 
@@ -555,22 +557,29 @@ class GPU(QtWidgets.QWidget):
                         if os.path.exists(self.rois_path):
                             try:
                                 roi_data = np.load(self.rois_path)
-                                if 'labels' in roi_data:
+                                if 'binary' in roi_data:
+                                    # Prefer union binary mask
+                                    binary = roi_data["binary"].astype(np.uint8)
+                                    print("🔄 Re-projecting updated binary mask")
+                                    labels = (binary > 0).astype(np.int32)
+                                elif 'labels' in roi_data:
                                     labels = roi_data["labels"]
                                     print(f"🔄 Re-projecting updated ROIs: {len(np.unique(labels))-1} ROIs")
                                 else:
-
                                     labels = np.load(self.rois_path)["labels"]
                                     print("🔄 Re-projecting original ROIs")
                             except Exception as e:
                                 print(f"⚠️ Could not load updated ROIs: {e}")
-
+                                
                                 labels = np.load(self.rois_path)["labels"]
                         else:
                             print("⚠️ No ROI file found for re-projection")
                             return
 
-                        rgb = (label2rgb(labels, bg_label=0) * 255).astype(np.uint8)
+                        # Build grayscale from binary/labels
+                        if labels.dtype != np.int32:
+                            labels = labels.astype(np.int32)
+                        img_gray = ((labels > 0).astype(np.uint8) * 255).astype(np.uint8)
 
                         screens = QGuiApplication.screens()
                         scr = screens[1] if len(screens) > 1 else screens[0]
@@ -578,27 +587,27 @@ class GPU(QtWidgets.QWidget):
                         tgt_w, tgt_h = size.width(), size.height()
 
                         # If mask image is smaller than projector screen, pad with black instead of resizing
-                        h, w = rgb.shape[:2]
+                        h, w = img_gray.shape[:2]
                         if h <= tgt_h and w <= tgt_w:
                             pad_top = (tgt_h - h) // 2
                             pad_bottom = tgt_h - h - pad_top
                             pad_left = (tgt_w - w) // 2
                             pad_right = tgt_w - w - pad_left
                             try:
-                                rgb = cv2.copyMakeBorder(
-                                    rgb, pad_top, pad_bottom, pad_left, pad_right,
-                                    borderType=cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                                img_gray = cv2.copyMakeBorder(
+                                    img_gray, pad_top, pad_bottom, pad_left, pad_right,
+                                    borderType=cv2.BORDER_CONSTANT, value=0
                                 )
                             except Exception:
                                 # Fallback to numpy pad if OpenCV fails
-                                rgb = np.pad(
-                                    rgb,
-                                    ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                                img_gray = np.pad(
+                                    img_gray,
+                                    ((pad_top, pad_bottom), (pad_left, pad_right)),
                                     mode='constant', constant_values=0
                                 )
                         else:
                             # If larger or mismatched, keep existing nearest-neighbor resize
-                            rgb = cv2.resize(rgb, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
+                            img_gray = cv2.resize(img_gray, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
 
                         if self.proj_display:
                             try:
@@ -607,8 +616,8 @@ class GPU(QtWidgets.QWidget):
                                 pass
                         self.proj_display = ProjectDisplay(scr)
                         H = getattr(self.camera, "translation_matrix", None)
-                        self.proj_display.show_image_fullscreen_on_second_monitor(rgb, H)
-                        print("🖥️ Updated mask re-projected")
+                        self.proj_display.show_image_fullscreen_on_second_monitor(img_gray, H)
+                        print("🖥️ Updated binary mask re-projected")
                         
 
                         if was_live_traces:

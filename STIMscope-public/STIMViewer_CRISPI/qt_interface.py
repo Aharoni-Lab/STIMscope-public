@@ -209,10 +209,20 @@ class Interface(QtWidgets.QMainWindow):
         self._button_start_projector.clicked.connect(self._toggle_start_projector)
         self._seq_type_label = QtWidgets.QLabel("Sequence Type")
         self._seq_type_dropdown = QtWidgets.QComboBox()
-        self._seq_type_dropdown.addItems(["1-bit RGB", "8-bit Mono"])  # default first
+        # Expanded options with explicit labels and defaults; make 8-bit RGB (0x03) the default
+        self._seq_type_dropdown.addItems([
+            "8-bit RGB (0x03)",
+            "8-bit Mono (0x02)",
+            "1-bit RGB (0x01)",
+            "1-bit Mono (0x00)",
+        ])
         try:
             self._seq_type_dropdown.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
             self._seq_type_dropdown.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        except Exception:
+            pass
+        try:
+            self._seq_type_dropdown.currentTextChanged.connect(self._on_seq_type_changed)
         except Exception:
             pass
         self._button_toggle_overlay = QtWidgets.QPushButton("Enable Overlay")
@@ -248,6 +258,17 @@ class Interface(QtWidgets.QMainWindow):
         self._button_send_triggers.clicked.connect(self._toggle_send_triggers)
         self._button_send_masks = QtWidgets.QPushButton("Send Masks")
         self._button_send_masks.clicked.connect(self._toggle_send_masks)
+        # Keep trigger/mask buttons compact to text, slightly larger
+        try:
+            self._button_send_triggers.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_send_triggers, 28)
+        except Exception:
+            pass
+        try:
+            self._button_send_masks.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            _set_compact_width_to_text(self._button_send_masks, 28)
+        except Exception:
+            pass
 
 
 
@@ -540,11 +561,28 @@ class Interface(QtWidgets.QMainWindow):
         row2_layout.addWidget(self._mask_pattern_browse)
         # Shift buttons left: replace stretch with a small spacing
         row2_layout.addSpacing(8)
-        row2_layout.addWidget(self._button_send_triggers)
-        row2_layout.addWidget(self._button_send_masks)
+        # New: Set Trig Params button (kept on HW Trigger Out row)
+        self._button_set_trig_params = QtWidgets.QPushButton("Set Trig Params")
+        try:
+            self._button_set_trig_params.setToolTip("Configure TriggerDelay (µs) and ExposureTime (µs)")
+        except Exception:
+            pass
+        self._button_set_trig_params.clicked.connect(self._open_trig_params_dialog)
+        row2_layout.addWidget(self._button_set_trig_params)
         row2_widget = QtWidgets.QWidget()
         row2_widget.setLayout(row2_layout)
         config_layout.addWidget(row2_widget,                             2, 0, 1, 2)
+        
+        # New Row (under HW Trigger Out row): start projector trigger and send masks
+        row2b_layout = QtWidgets.QHBoxLayout()
+        row2b_layout.setContentsMargins(0, 0, 0, 0)
+        row2b_layout.setSpacing(6)
+        row2b_layout.addWidget(self._button_send_triggers)
+        row2b_layout.addWidget(self._button_send_masks)
+        row2b_layout.addStretch(1)
+        row2b_widget = QtWidgets.QWidget()
+        row2b_widget.setLayout(row2b_layout)
+        config_layout.addWidget(row2b_widget,                            3, 0, 1, 2, Qt.AlignLeft)
         
         # Row 3: Project ON/OFF buttons
         project_buttons_layout = QtWidgets.QHBoxLayout()
@@ -557,7 +595,7 @@ class Interface(QtWidgets.QMainWindow):
         project_buttons_layout.addStretch()
         project_buttons_widget = QtWidgets.QWidget()
         project_buttons_widget.setLayout(project_buttons_layout)
-        config_layout.addWidget(project_buttons_widget,                  3, 0, 1, 2)
+        config_layout.addWidget(project_buttons_widget,                  4, 0, 1, 2)
         
         # Row 4: Combine Trigger Line, Camera Type, and Camera Format in one row
         self._camera_format_label = QtWidgets.QLabel("Camera Format")
@@ -574,7 +612,7 @@ class Interface(QtWidgets.QMainWindow):
         row_cam_all.addWidget(self._dropdown_pixel_format)
         row_cam_all_widget = QtWidgets.QWidget()
         row_cam_all_widget.setLayout(row_cam_all)
-        config_layout.addWidget(row_cam_all_widget,                      4, 0, 1, 2, Qt.AlignLeft)
+        config_layout.addWidget(row_cam_all_widget,                      5, 0, 1, 2, Qt.AlignLeft)
 
 
         capture_group = QtWidgets.QGroupBox("")
@@ -1714,6 +1752,131 @@ class Interface(QtWidgets.QMainWindow):
         except Exception:
             pass
 
+    def _open_trig_params_dialog(self):
+        try:
+            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QCheckBox, QPushButton
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Trigger Parameters")
+            try:
+                dlg.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
+                dlg.setModal(False)
+                dlg.setWindowModality(QtCore.Qt.NonModal)
+                dlg.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+            except Exception:
+                pass
+
+            lay = QVBoxLayout(dlg)
+            grid = QGridLayout()
+
+            # Enable toggles and inputs
+            chk_delay = QCheckBox("Enable TriggerDelay (µs)")
+            edt_delay = QLineEdit()
+            edt_delay.setPlaceholderText("e.g. 0")
+            chk_exp = QCheckBox("Enable ExposureTime (µs)")
+            edt_exp = QLineEdit()
+            edt_exp.setPlaceholderText("e.g. 33333.33")
+
+            # Populate from stored values if present
+            try:
+                if getattr(self, '_trig_delay_enabled', False):
+                    chk_delay.setChecked(True)
+                edt_delay.setText(str(getattr(self, '_trig_delay_us', "")))
+            except Exception:
+                pass
+            try:
+                if getattr(self, '_trig_exp_enabled', False):
+                    chk_exp.setChecked(True)
+                edt_exp.setText(str(getattr(self, '_trig_exp_us', "")))
+            except Exception:
+                pass
+
+            grid.addWidget(chk_delay, 0, 0)
+            grid.addWidget(edt_delay, 0, 1)
+            grid.addWidget(chk_exp,   1, 0)
+            grid.addWidget(edt_exp,   1, 1)
+
+            lay.addLayout(grid)
+
+            btn_apply = QPushButton("Apply")
+            btn_close = QPushButton("Close")
+            row = QtWidgets.QHBoxLayout()
+            row.addStretch(1)
+            row.addWidget(btn_apply)
+            row.addWidget(btn_close)
+            lay.addLayout(row)
+
+            def _apply():
+                try:
+                    self._trig_delay_enabled = bool(chk_delay.isChecked())
+                    self._trig_exp_enabled   = bool(chk_exp.isChecked())
+                    # Parse numbers if provided
+                    try:
+                        self._trig_delay_us = float(edt_delay.text()) if edt_delay.text().strip() else None
+                    except Exception:
+                        self._trig_delay_us = None
+                    try:
+                        self._trig_exp_us = float(edt_exp.text()) if edt_exp.text().strip() else None
+                    except Exception:
+                        self._trig_exp_us = None
+
+                    print(f"[CAM] Trig params set: delay_enabled={self._trig_delay_enabled} delay_us={self._trig_delay_us} exp_enabled={self._trig_exp_enabled} exp_us={self._trig_exp_us}")
+
+                    # If in hardware mode and running, apply immediately
+                    try:
+                        if getattr(self._camera, 'acquisition_running', False) and getattr(self._camera, 'acquisition_mode', 0) == 1:
+                            self._apply_trig_params_to_camera()
+                    except Exception:
+                        pass
+                except Exception as e:
+                    print(f"Failed to apply trig params: {e}")
+
+            btn_apply.clicked.connect(_apply)
+            btn_close.clicked.connect(dlg.close)
+
+            dlg.show()
+        except Exception as e:
+            print(f"Failed to open Trigger Parameters dialog: {e}")
+
+    def _apply_trig_params_to_camera(self):
+        try:
+            nm = getattr(self._camera, 'node_map', None)
+            if nm is None:
+                return
+            # Apply TriggerDelay if enabled and value is valid
+            if getattr(self, '_trig_delay_enabled', False) and getattr(self, '_trig_delay_us', None) is not None:
+                try:
+                    nm.FindNode("TriggerDelay").SetValue(float(self._trig_delay_us))
+                    print(f"[CAM] Applied TriggerDelay = {float(self._trig_delay_us)} µs")
+                except Exception as e:
+                    print(f"[CAM] Failed to set TriggerDelay: {e}")
+            # Apply ExposureTime if enabled and value is valid
+            if getattr(self, '_trig_exp_enabled', False) and getattr(self, '_trig_exp_us', None) is not None:
+                try:
+                    nm.FindNode("ExposureAuto").SetCurrentEntry("Off")
+                except Exception:
+                    pass
+                try:
+                    nm.FindNode("ExposureTime").SetValue(float(self._trig_exp_us))
+                    print(f"[CAM] Applied ExposureTime = {float(self._trig_exp_us)} µs")
+                except Exception as e:
+                    print(f"[CAM] Failed to set ExposureTime: {e}")
+        except Exception:
+            pass
+    def _on_seq_type_changed(self, text: str):
+        try:
+            sel = text
+            if "0x03" in sel or sel.startswith("8-bit RGB"):
+                seq_first = "0x03"
+            elif "0x02" in sel or sel.startswith("8-bit Mono"):
+                seq_first = "0x02"
+            elif "0x00" in sel or sel.startswith("1-bit Mono"):
+                seq_first = "0x00"
+            else:
+                seq_first = "0x01"  # 1-bit RGB
+            print(f"[I2C] Sequence type changed: {sel} -> {seq_first}")
+        except Exception:
+            pass
+
     def _toggle_send_triggers(self):
         QProcess = self._ensure_qprocess()
         try:
@@ -1740,8 +1903,18 @@ class Interface(QtWidgets.QMainWindow):
             except Exception:
                 pass
 
-            # Map sequence type to first byte of pattern_cfg (0x02=8-bit Mono, 0x01=1-bit RGB)
-            seq_first = "0x02" if (self._seq_type_dropdown.currentText() == "8-bit Mono") else "0x01"
+            # Map sequence type to first byte of pattern_cfg
+            # 0x00 = 1-bit Mono, 0x01 = 1-bit RGB, 0x02 = 8-bit Mono, 0x03 = 8-bit RGB
+            sel = self._seq_type_dropdown.currentText()
+            if "0x03" in sel or sel.startswith("8-bit RGB"):
+                seq_first = "0x03"
+            elif "0x02" in sel or sel.startswith("8-bit Mono"):
+                seq_first = "0x02"
+            elif "0x00" in sel or sel.startswith("1-bit Mono"):
+                seq_first = "0x00"
+            else:
+                seq_first = "0x01"  # 1-bit RGB
+            print(f"[I2C] Applying sequence mode: {sel} -> {seq_first}")
             print(f"[I2C] Launch: {py} {script_path} --seq-first {seq_first}")
             self._proc_i2c.start(py, [script_path, "--seq-first", seq_first])
         except Exception as e:
@@ -2317,6 +2490,11 @@ class Interface(QtWidgets.QMainWindow):
             if hasattr(self._camera, 'is_armed'):
                 self._camera.is_armed = False
             self._update_recording_button_text()
+            # Apply pending trigger params if enabled
+            try:
+                self._apply_trig_params_to_camera()
+            except Exception:
+                pass
         else:
             # Disarm if armed when stopping hardware acquisition
             if getattr(self._camera, "is_armed", False):

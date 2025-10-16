@@ -99,19 +99,27 @@ def build_patterns(args):
             seq.append(blank())
         return None, seq
     elif args.pattern == "segmask":
-        # Load labels or masks from NPZ and create a single grayscale frame
+        # Load binary (preferred) or labels/masks from NPZ and create a single grayscale frame
         fp = getattr(args, 'roi_npz', '') or os.path.join(os.getcwd(), "rois.npz")
         try:
             data = np.load(fp, allow_pickle=True)
-            if 'labels' in data:
+            if 'binary' in data:
+                b = data['binary'].astype(np.uint8)
+                img = (b > 0).astype(np.uint8) * 255
+            elif 'labels' in data:
                 labels = data['labels'].astype(np.int32)
                 img = (labels > 0).astype(np.uint8) * 255
             elif 'masks' in data:
                 masks = data['masks']
+                # Union all masks if 3D array, else try first mask
                 if isinstance(masks, np.ndarray) and masks.ndim == 3 and masks.shape[0] > 0:
-                    img = (masks[0].astype(bool)).astype(np.uint8) * 255
+                    union = np.any(masks.astype(bool), axis=0)
+                    img = union.astype(np.uint8) * 255
                 elif isinstance(masks, list) and len(masks) > 0:
-                    img = (np.array(masks[0]).astype(bool)).astype(np.uint8) * 255
+                    union = np.zeros_like(np.array(masks[0]).astype(bool))
+                    for m in masks:
+                        union |= np.array(m).astype(bool)
+                    img = union.astype(np.uint8) * 255
                 else:
                     img = blank()
             else:
@@ -161,6 +169,8 @@ def main():
                     help="If set, load cam_from_proj_{x,y}.npy from this dir and prewarp frames")
     ap.add_argument("--roi-npz", type=str, default="",
                     help="Path to rois.npz containing 'labels' or 'masks'")
+    ap.add_argument("--flip-x", action="store_true", help="Flip frames horizontally before send")
+    ap.add_argument("--flip-y", action="store_true", help="Flip frames vertically before send")
     args = ap.parse_args()
 
     global W, H
@@ -211,10 +221,23 @@ def main():
             print(f"⚠️  LUT prewarp failed: {_e}")
             return img_gray
 
+    def _apply_flips(img: np.ndarray) -> np.ndarray:
+        try:
+            if args.flip_x and args.flip_y:
+                return np.flipud(np.fliplr(img))
+            if args.flip_x:
+                return np.fliplr(img)
+            if args.flip_y:
+                return np.flipud(img)
+        except Exception:
+            pass
+        return img
+
     def send_mask(mid, img):
         meta = json.dumps({"id": int(mid)}).encode()
         try:
-            frame = _prewarp(img)
+            img2 = _apply_flips(img)
+            frame = _prewarp(img2)
             s.send_multipart([meta, frame.tobytes()], flags=zmq.DONTWAIT)
             return True
         except zmq.Again:

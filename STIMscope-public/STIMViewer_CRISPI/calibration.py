@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+import json, os
 from typing import Tuple, Optional
 
 import cv2
@@ -23,6 +24,7 @@ REF_REG_IMG = GEN_DIR / "custom_registration_image.png"
 CALIB_CAPTURE_IMG = GEN_DIR / "calibration_capture_image.png"
 CALIB_OUTPUT_IMG = GEN_DIR / "CalibOutput.jpg"
 HOMOGRAPHY_NPY = GEN_DIR / "homography_cam2proj.npy"
+FLIP_CFG_JSON = GEN_DIR / "flip_config.json"
 SL_DIR = (GEN_DIR / "GrayCode").resolve()
 SL_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -669,9 +671,69 @@ def find_homography(
     g_ref = cv2.cvtColor(img_ref, cv2.COLOR_BGR2GRAY)
     g_cap = cv2.cvtColor(img_cap, cv2.COLOR_BGR2GRAY)
 
-    # Use capture as-is; horizontal flip is handled at projection time.
-    img_cap_for_match = img_cap
-    g_cap_for_match = g_cap
+    # --- Optional auto flip detection (guarded by STIM_AUTO_FLIP=1) ---
+    auto_flip = os.environ.get("STIM_AUTO_FLIP", "0").strip() == "1"
+    best_mode = None
+    if auto_flip:
+        def _quick_estimate_h_and_mse(cap_variant_bgr, ref_bgr) -> tuple[np.ndarray, float]:
+            try:
+                gr = cv2.cvtColor(ref_bgr, cv2.COLOR_BGR2GRAY)
+                gc = cv2.cvtColor(cap_variant_bgr, cv2.COLOR_BGR2GRAY)
+                gr = cv2.equalizeHist(gr)
+                gc = cv2.equalizeHist(gc)
+                det = cv2.ORB_create(nfeatures=2000)
+                k1, d1 = det.detectAndCompute(gc, None)
+                k2, d2 = det.detectAndCompute(gr, None)
+                if d1 is None or d2 is None or len(k1) < 8 or len(k2) < 8:
+                    return np.eye(3, dtype=np.float64), float('inf')
+                bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
+                knn = bf.knnMatch(d1, d2, k=2)
+                matches = []
+                for pair in knn:
+                    if len(pair) < 2:
+                        continue
+                    m, n = pair
+                    if m.distance < 0.7 * n.distance:
+                        matches.append(m)
+                if len(matches) < 8:
+                    return np.eye(3, dtype=np.float64), float('inf')
+                pts_cap = np.float32([k1[m.queryIdx].pt for m in matches]).reshape(-1, 2)
+                pts_ref = np.float32([k2[m.trainIdx].pt for m in matches]).reshape(-1, 2)
+                Hq, inl = cv2.findHomography(pts_cap, pts_ref, cv2.RANSAC, ransacReprojThreshold=2.0, confidence=0.999)
+                if Hq is None:
+                    return np.eye(3, dtype=np.float64), float('inf')
+                h, w = gr.shape
+                warp = cv2.warpPerspective(cv2.cvtColor(cap_variant_bgr, cv2.COLOR_BGR2GRAY), Hq, (w, h))
+                mse = float(np.mean((warp.astype(np.float32) - gr.astype(np.float32)) ** 2))
+                return Hq.astype(np.float64), mse
+            except Exception:
+                return np.eye(3, dtype=np.float64), float('inf')
+
+        variants = {
+            "none": img_cap,
+            "horizontal": cv2.flip(img_cap, 1),
+            "vertical": cv2.flip(img_cap, 0),
+            "both": cv2.flip(img_cap, -1),
+        }
+        best_mode = "none"
+        best_mse = float('inf')
+        for mode, cap_var in variants.items():
+            _, mse = _quick_estimate_h_and_mse(cap_var, img_ref)
+            if mse < best_mse:
+                best_mse = mse
+                best_mode = mode
+        print(f"🔎 Auto flip detection → {best_mode} (mse={best_mse:.1f})")
+
+    # Use chosen flip for homography input (or none if not enabled)
+    if best_mode == "horizontal":
+        img_cap_for_match = cv2.flip(img_cap, 1)
+    elif best_mode == "vertical":
+        img_cap_for_match = cv2.flip(img_cap, 0)
+    elif best_mode == "both":
+        img_cap_for_match = cv2.flip(img_cap, -1)
+    else:
+        img_cap_for_match = img_cap
+    g_cap_for_match = cv2.cvtColor(img_cap_for_match, cv2.COLOR_BGR2GRAY)
 
     # Ensure deterministic behavior for RANSAC/USAC inside OpenCV
     try:
@@ -1037,6 +1099,15 @@ def find_homography(
             
         except Exception as e:
             print(f"❌ Output save failed: {e}")
+
+    # Persist detected flip mode for projection path only if auto flip was enabled
+    if auto_flip and best_mode is not None:
+        try:
+            with open(FLIP_CFG_JSON.as_posix(), 'w') as f:
+                json.dump({"flip_mode": best_mode}, f)
+            print(f"💾 Saved flip config: {FLIP_CFG_JSON} → {best_mode}")
+        except Exception as e:
+            print(f"⚠️ Failed to save flip config: {e}")
 
     print(f"✅ Calibration completed successfully!")
     return H.astype(np.float64)
