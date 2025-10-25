@@ -492,23 +492,21 @@ class Interface(QtWidgets.QMainWindow):
         row0_layout.setContentsMargins(0, 0, 0, 0)
         row0_layout.setSpacing(4)
         row0_layout.addWidget(self._button_start_hardware_acquisition)
-        row0_layout.addWidget(self._button_calibrate)
-        row0_layout.addWidget(self._button_sl_calibrate)
-        # Toggle for enabling subpixel phase refinement
+        # Move Start Projection Engine next to Start Hardware Acquisition (right side)
+        row0_layout.addWidget(self._button_start_projector)
+        # The calibration-related buttons are moved to a dedicated top panel
+        # (Calibrate, Structured-Light Calibrate, Subpixel, Project LUT-Warped)
         try:
             self._chk_phase_refine = QtWidgets.QCheckBox("Subpixel")
             self._chk_phase_refine.setChecked(False)
             self._chk_phase_refine.setToolTip("Enable sinusoidal phase refinement for subpixel LUT. If results degrade, uncheck.")
-            row0_layout.addWidget(self._chk_phase_refine)
         except Exception:
             pass
-        row0_layout.addWidget(self._button_sl_project_reg)
         row0_widget = QtWidgets.QWidget()
         row0_widget.setLayout(row0_layout)
-        config_layout.addWidget(row0_widget,                             0, 0, 1, 2)
+        config_layout.addWidget(row0_widget,                             0, 0, 1, 2, Qt.AlignLeft)
         # Row 1: Projection engine and trigger controls
         row1_layout = QtWidgets.QHBoxLayout()
-        row1_layout.addWidget(self._button_start_projector)
         row1_layout.addWidget(self._seq_type_label)
         row1_layout.addWidget(self._seq_type_dropdown)
         row1_layout.addWidget(self._button_toggle_overlay)
@@ -738,11 +736,49 @@ class Interface(QtWidgets.QMainWindow):
         button_bar_layout.setColumnStretch(6, 0)
         button_bar_layout.setColumnStretch(7, 0)
 
-        # Shift everything to the left to align with video preview
-        button_bar_layout.addWidget(config_group, 0, 0, 4, 1)       # Column 0 (leftmost)
-        button_bar_layout.addWidget(capture_group, 4, 0, 2, 1)      # Column 0, below config
+        # New: Top calibration panel (above hardware trigger/config zone)
+        try:
+            calib_panel = QtWidgets.QWidget()
+            calib_panel.setObjectName("calib_panel")
+            calib_layout = QtWidgets.QHBoxLayout(calib_panel)
+            calib_layout.setContentsMargins(6, 6, 6, 6)
+            calib_layout.setSpacing(6)
+            # Style similar to other panels but without a title area
+            calib_panel.setStyleSheet(
+                "border: 1px solid #d1d1d6;"
+                "border-radius: 6px;"
+                "margin-top: 2px;"
+                "font-size: 11px;"
+                "color: #1c1c1e;"
+                "background-color: #ffffff;"
+                "padding: 4px;"
+                " QPushButton { font-weight: normal; color: #000000;"
+                "   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f5f5f7, stop:1 #eaeaef);"
+                "   border: 1px solid #cfcfd6; border-radius: 6px; padding: 4px 10px; }"
+                " QPushButton:hover {"
+                "   background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #f1f1f6);"
+                "   border: 1px solid #bdbdca; }"
+                " QPushButton:pressed { background-color: #e6e6ee; }"
+                " QPushButton:disabled { color: #b8b6c9; background-color: #fafafa; border: 1px solid #eeeeee; }"
+            )
+            # Move calibration-related controls here
+            calib_layout.addWidget(self._button_calibrate)
+            calib_layout.addWidget(self._button_sl_calibrate)
+            try:
+                calib_layout.addWidget(self._chk_phase_refine)
+            except Exception:
+                pass
+            calib_layout.addWidget(self._button_sl_project_reg)
+            # Place the new panel at the very top-left
+            button_bar_layout.addWidget(calib_panel, 0, 0, 1, 1)
+        except Exception:
+            pass
+
+        # Shift everything to the left to align with video preview; push existing panels down
+        button_bar_layout.addWidget(config_group, 1, 0, 4, 1)       # Column 0 (under calibration panel)
+        button_bar_layout.addWidget(capture_group, 5, 0, 2, 1)      # Column 0, below config
         # Keep control panel as a separate panel below the left column panels
-        button_bar_layout.addWidget(control_group,                  6, 0, 1, 1, Qt.AlignLeft)
+        button_bar_layout.addWidget(control_group,                  7, 0, 1, 1, Qt.AlignLeft)
         
         # Add spacer to push everything to the left
         spacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -1057,20 +1093,49 @@ class Interface(QtWidgets.QMainWindow):
         btn_dots  = QPushButton("Dot Array Test")
         btn_rtphy = QPushButton("Round-Trip (Physical)")
         btn_edge  = QPushButton("Edge Strip Test")
+        btn_calib_char = QPushButton("Calib Grid Characterization")
         # arrange buttons in two rows
-        btns = [btn_diag, btn_proj, btn_eval, btn_rterr, btn_probe, btn_dots, btn_rtphy, btn_edge]
+        btns = [btn_diag, btn_proj, btn_eval, btn_rterr, btn_probe, btn_dots, btn_rtphy, btn_edge, btn_calib_char]
         for i, b in enumerate(btns):
             r = i // 4
             c = i % 4
             sl_row.addWidget(b, r, c)
         lay.addLayout(sl_row)
 
-        # Zoomable preview
+        # Zoomable preview (with mouse wheel zoom + double-click reset)
         from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+        class _ZoomGraphicsView(QGraphicsView):
+            def __init__(self, *a, **k):
+                super().__init__(*a, **k)
+                try:
+                    self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+                    self.setDragMode(QGraphicsView.ScrollHandDrag)
+                except Exception:
+                    pass
+            def wheelEvent(self, ev):
+                try:
+                    angle = ev.angleDelta().y() / 120.0
+                    factor = 1.25 ** max(-3.0, min(3.0, angle))
+                    self.scale(factor, factor)
+                    ev.accept()
+                except Exception:
+                    super().wheelEvent(ev)
+            def mouseDoubleClickEvent(self, ev):
+                try:
+                    self.setTransform(QtGui.QTransform())
+                    # Fit current pixmap item if present
+                    items = self.scene().items()
+                    for it in items:
+                        if isinstance(it, QGraphicsPixmapItem):
+                            self.fitInView(it, Qt.KeepAspectRatio)
+                            break
+                    ev.accept()
+                except Exception:
+                    super().mouseDoubleClickEvent(ev)
+
         sl_scene = QGraphicsScene()
-        sl_view = QGraphicsView(sl_scene)
+        sl_view = _ZoomGraphicsView(sl_scene)
         sl_view.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, on=True)
-        sl_view.setDragMode(QGraphicsView.ScrollHandDrag)
         sl_view.setMinimumSize(360, 220)
         sl_view.setStyleSheet("border:1px solid #d1d1d6;")
         sl_pix = QGraphicsPixmapItem()
@@ -1136,7 +1201,11 @@ class Interface(QtWidgets.QMainWindow):
             if inv_x is None or _prewarp is None:
                 return
             cam_w, cam_h = _infer_cam_size()
-            grid = _make_cam_grid(cam_w, cam_h)
+            try:
+                _cell = max(4, int(sp_cell.value()))
+            except Exception:
+                _cell = 16
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
             proj_h, proj_w = inv_x.shape
             warped = _prewarp(cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
             # Prefer sending to the projection engine to avoid GL/X context conflicts
@@ -1165,27 +1234,400 @@ class Interface(QtWidgets.QMainWindow):
             except Exception:
                 self.projection.show_image_fullscreen_on_second_monitor(warped, None)
 
-        def _on_capture_evaluate():
+        # ---------------- Homography (H) Validation (simple calibration) ----------------
+        h_title = QLabel("Calibration (H) Validation:")
+        try: h_title.setStyleSheet("font-weight:600;")
+        except Exception: pass
+        lay.addWidget(h_title)
+        h_row = _QGrid()
+        btn_h_proj = QPushButton("Project Grid (H)")
+        btn_h_eval = QPushButton("Capture + Evaluate (H)")
+        btn_h_dots = QPushButton("Dot Array Test (H)")
+        h_row.addWidget(btn_h_proj, 0, 0)
+        h_row.addWidget(btn_h_eval, 0, 1)
+        h_row.addWidget(btn_h_dots, 0, 4)
+        # Grid pitch control
+        lbl_cell = QLabel("Cell (px):")
+        sp_cell = QtWidgets.QSpinBox(dlg)
+        try:
+            sp_cell.setRange(4, 256)
+            sp_cell.setSingleStep(2)
+            sp_cell.setValue(16)
+            sp_cell.setToolTip("Grid square size in camera pixels")
+        except Exception:
+            pass
+        h_row.addWidget(lbl_cell, 0, 2)
+        h_row.addWidget(sp_cell, 0, 3)
+        lay.addLayout(h_row)
+
+        def _on_h_project_grid():
             try:
-                save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
-                os.makedirs(save_dir, exist_ok=True)
-                cap_path = os.path.join(save_dir, "sl_validation_cap.png")
-                self._camera.snapshot(cap_path)
-                cap = cv2.imread(cap_path, cv2.IMREAD_GRAYSCALE)
-                if cap is None:
-                    QMessageBox.warning(dlg, "Capture Failed", "Could not read snapshot.")
-                    return
-                cam_w, cam_h = cap.shape[1], cap.shape[0]
-                grid = _make_cam_grid(cam_w, cam_h)
-                diff = (cap.astype(_np.float32) - grid.astype(_np.float32))
-                mse = float(_np.mean(diff*diff))
-                if mse <= 1e-9:
-                    psnr = 99.0
-                else:
-                    psnr = 10.0 * _np.log10((255.0*255.0)/mse)
-                QMessageBox.information(dlg, "Grid Evaluation", f"MSE: {mse:.1f}\nPSNR: {psnr:.2f} dB")
+                import cv2, numpy as _np
+            except Exception:
+                QMessageBox.warning(dlg, "Dependencies", "OpenCV not available")
+                return
+            H = getattr(self._camera, 'translation_matrix', None)
+            if not isinstance(H, _np.ndarray) or H.shape != (3, 3):
+                QMessageBox.warning(dlg, "Calibration", "No homography available. Run Calibrate first.")
+                return
+            cam_w, cam_h = _infer_cam_size()
+            try:
+                _cell = max(4, int(sp_cell.value()))
+            except Exception:
+                _cell = 16
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            img = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
+            # Ensure local projector window exists and use H path (no LUT)
+            if not self._ensure_projection():
+                # Fallback: show warped preview inside troubleshooting
+                try:
+                    h, w = img.shape[:2]
+                    prev = cv2.warpPerspective(img, H.astype(_np.float64), (w, h))
+                    pm = _to_pix(prev); sl_pix.setPixmap(pm); sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                except Exception:
+                    QMessageBox.warning(dlg, "Projection", "Projection window unavailable")
+                return
+            try:
+                self.projection.show_image_fullscreen_on_second_monitor(img, H)
             except Exception as e:
-                QMessageBox.warning(dlg, "Evaluation Error", str(e))
+                # Also show preview in troubleshooting for confirmation
+                try:
+                    h, w = img.shape[:2]
+                    prev = cv2.warpPerspective(img, H.astype(_np.float64), (w, h))
+                    pm = _to_pix(prev); sl_pix.setPixmap(pm); sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                except Exception:
+                    pass
+                QMessageBox.warning(dlg, "Projection", str(e))
+
+        # Hold last H evaluation images for mode switching
+        _h_last_grid = {'img': None}
+        _h_last_cap = {'img': None}
+        _h_last_overlap = {'img': None}
+        # Track whether we've fitted the view once for this set; preserves zoom on toggles
+        _h_view_fit = {'done': False}
+
+        def _update_h_preview(mode: str):
+            src = None
+            if mode == 'ref' and _h_last_grid['img'] is not None:
+                src = _h_last_grid['img']
+            elif mode == 'cap' and _h_last_cap['img'] is not None:
+                src = _h_last_cap['img']
+            elif mode == 'ov' and _h_last_overlap['img'] is not None:
+                src = _h_last_overlap['img']
+            if src is not None:
+                try:
+                    pm = _to_pix(src)
+                    sl_pix.setPixmap(pm)
+                    if not _h_view_fit['done']:
+                        sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                        _h_view_fit['done'] = True
+                except Exception:
+                    pass
+
+        def _on_h_capture_eval():
+            try:
+                import cv2, numpy as _np, time as _t
+            except Exception:
+                QMessageBox.warning(dlg, "Dependencies", "OpenCV not available")
+                return
+            H = getattr(self._camera, 'translation_matrix', None)
+            if not isinstance(H, _np.ndarray) or H.shape != (3, 3):
+                QMessageBox.warning(dlg, "Calibration", "No homography available. Run Calibrate first.")
+                return
+            cam_w, cam_h = _infer_cam_size()
+            try:
+                _cell = max(4, int(sp_cell.value()))
+            except Exception:
+                _cell = 16
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            img = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
+            if self._ensure_projection():
+                try:
+                    self.projection.show_image_fullscreen_on_second_monitor(img, H)
+                    _t.sleep(0.15)
+                except Exception:
+                    pass
+            cap = _capture_gray()
+            if cap is None:
+                QMessageBox.warning(dlg, "Capture Failed", "No camera snapshot available")
+                return
+            if cap.shape != grid.shape:
+                try:
+                    cap = cv2.resize(cap, (grid.shape[1], grid.shape[0]), interpolation=cv2.INTER_AREA)
+                except Exception:
+                    pass
+            # Threshold to binary masks
+            try:
+                _, cap_bin = cv2.threshold(cap, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            except Exception:
+                cap_bin = (cap > 128).astype(_np.uint8) * 255
+            grid_bin = (grid > 128).astype(_np.uint8) * 255
+            diff = (cap_bin.astype(_np.int16) - grid_bin.astype(_np.int16)).astype(_np.float32)
+            mse = float(_np.mean((diff/255.0)**2)) * (255.0*255.0)
+            psnr = 99.0 if mse <= 1e-9 else float(10.0 * _np.log10((255.0*255.0)/mse))
+            # Build color-coded overlap: green where both 1, red where mismatch, black elsewhere
+            both = ((cap_bin == 255) & (grid_bin == 255))
+            xor  = ((cap_bin == 255) ^ (grid_bin == 255))
+            vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
+            vis[both] = (0, 255, 0)      # green (BGR)
+            vis[xor]  = (0, 0, 255)      # red (BGR)
+            try:
+                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
+            except Exception:
+                pass
+            try:
+                _h_last_grid['img'] = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
+                _h_last_cap['img']  = cv2.cvtColor(_np.clip(cap, 0, 255).astype(_np.uint8), cv2.COLOR_GRAY2BGR)
+                _h_last_overlap['img'] = vis
+                # Reset fit for new images; subsequent toggles preserve zoom
+                _h_view_fit['done'] = False
+                _update_h_preview('ov')
+            except Exception:
+                pass
+
+        def _on_h_dot_array_test():
+            try:
+                import cv2, numpy as _np, time as _t
+            except Exception:
+                QMessageBox.warning(dlg, "Dependencies", "OpenCV not available")
+                return
+            H = getattr(self._camera, 'translation_matrix', None)
+            if not isinstance(H, _np.ndarray) or H.shape != (3, 3):
+                QMessageBox.warning(dlg, "Calibration", "No homography available. Run Calibrate first.")
+                return
+            cam_w, cam_h = _infer_cam_size()
+            try:
+                pitch = max(4, int(sp_cell.value()))
+            except Exception:
+                pitch = 16
+            # Build dot array in camera space
+            ref = _np.zeros((cam_h, cam_w), _np.uint8)
+            # Choose a conservative radius relative to pitch
+            radius = max(2, int(round(pitch * 0.18)))
+            try:
+                for y in range(radius + 1, cam_h - radius - 1, pitch):
+                    for x in range(radius + 1, cam_w - radius - 1, pitch):
+                        cv2.circle(ref, (int(x), int(y)), radius, 255, thickness=-1)
+            except Exception:
+                # Fallback: sparse centers without cv2
+                ref[::pitch, ::pitch] = 255
+            img = cv2.cvtColor(ref, cv2.COLOR_GRAY2BGR)
+            if self._ensure_projection():
+                try:
+                    self.projection.show_image_fullscreen_on_second_monitor(img, H)
+                    _t.sleep(0.15)
+                except Exception:
+                    pass
+            cap = _capture_gray()
+            if cap is None:
+                QMessageBox.warning(dlg, "Capture Failed", "No camera snapshot available")
+                return
+            if cap.shape != ref.shape:
+                try:
+                    cap = cv2.resize(cap, (ref.shape[1], ref.shape[0]), interpolation=cv2.INTER_AREA)
+                except Exception:
+                    pass
+            # Threshold both
+            try:
+                _, cap_bin = cv2.threshold(cap, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            except Exception:
+                cap_bin = (cap > 128).astype(_np.uint8) * 255
+            ref_bin = (ref > 128).astype(_np.uint8) * 255
+            # Compute simple metrics
+            diff = (cap_bin.astype(_np.int16) - ref_bin.astype(_np.int16)).astype(_np.float32)
+            mse = float(_np.mean((diff/255.0)**2)) * (255.0*255.0)
+            psnr = 99.0 if mse <= 1e-9 else float(10.0 * _np.log10((255.0*255.0)/mse))
+            # Overlap viz
+            both = ((cap_bin == 255) & (ref_bin == 255))
+            xor  = ((cap_bin == 255) ^ (ref_bin == 255))
+            vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
+            vis[both] = (0, 255, 0)
+            vis[xor]  = (0, 0, 255)
+            try:
+                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+            except Exception:
+                pass
+            try:
+                _h_last_grid['img'] = cv2.cvtColor(ref, cv2.COLOR_GRAY2BGR)
+                _h_last_cap['img']  = cv2.cvtColor(_np.clip(cap, 0, 255).astype(_np.uint8), cv2.COLOR_GRAY2BGR)
+                _h_last_overlap['img'] = vis
+                _h_view_fit['done'] = False
+                _update_h_preview('ov')
+            except Exception:
+                pass
+
+        btn_h_proj.clicked.connect(_on_h_project_grid)
+        btn_h_eval.clicked.connect(_on_h_capture_eval)
+        btn_h_dots.clicked.connect(_on_h_dot_array_test)
+
+        # H view mode (Reference / Captured / Overlap)
+        try:
+            from PyQt5.QtWidgets import QHBoxLayout as _QHBox, QRadioButton as _QRB, QButtonGroup as _QBG
+            mode_row = _QHBox()
+            mode_row.addWidget(QLabel("View:"))
+            rb_ref = _QRB("Reference")
+            rb_cap = _QRB("Captured")
+            rb_ov  = _QRB("Overlap")
+            rb_ov.setChecked(True)
+            bg = _QBG(dlg)
+            bg.addButton(rb_ref); bg.addButton(rb_cap); bg.addButton(rb_ov)
+            mode_row.addWidget(rb_ref); mode_row.addWidget(rb_cap); mode_row.addWidget(rb_ov)
+            # Legend
+            leg = QLabel("Legend: \nGreen=overlap, Red=mismatch")
+            try: leg.setStyleSheet("color:#1c1c1e;")
+            except Exception: pass
+            mode_row.addSpacing(12); mode_row.addWidget(leg)
+            lay.addLayout(mode_row)
+            def _on_mode_change():
+                if rb_ref.isChecked():
+                    _update_h_preview('ref')
+                elif rb_cap.isChecked():
+                    _update_h_preview('cap')
+                else:
+                    _update_h_preview('ov')
+            rb_ref.toggled.connect(_on_mode_change)
+            rb_cap.toggled.connect(_on_mode_change)
+            rb_ov.toggled.connect(_on_mode_change)
+        except Exception:
+            pass
+
+        def _on_calib_char():
+            try:
+                import numpy as _np, cv2
+                from scipy.spatial import cKDTree
+            except Exception as e:
+                QMessageBox.warning(dlg, "Dependencies", f"Missing scipy or cv2: {e}")
+                return
+            try:
+                # Build camera grid points
+                cam_w, cam_h = _infer_cam_size()
+                cell = 64
+                pts = []
+                for y in range(cell//2, cam_h, cell):
+                    for x in range(cell//2, cam_w, cell):
+                        pts.append([x, y, 1.0])
+                P = _np.array(pts, dtype=_np.float64).T  # 3xN
+                # Load H (camera->projector)
+                H = getattr(self._camera, 'translation_matrix', None)
+                if not isinstance(H, _np.ndarray) or H.shape != (3,3):
+                    try:
+                        from pathlib import Path as _P
+                        npy = (_P(__file__).resolve().parent / 'Assets' / 'Generated' / 'homography_cam2proj.npy').as_posix()
+                        if os.path.isfile(npy):
+                            H = _np.load(npy)
+                    except Exception:
+                        H = None
+                if H is None:
+                    QMessageBox.warning(dlg, "Calibration", "No homography available. Run Calibrate first.")
+                    return
+                # Map to projector space
+                X = H @ P; X /= _np.clip(X[2:3, :], 1e-9, None)
+                proj_xy = X[:2, :].T
+                # Ideal projector grid
+                try:
+                    proj_w = int(getattr(self, '_proj_w', 1920))
+                    proj_h = int(getattr(self, '_proj_h', 1080))
+                except Exception:
+                    proj_w, proj_h = 1920, 1080
+                gx = _np.arange(cell//2, proj_w, cell)
+                gy = _np.arange(cell//2, proj_h, cell)
+                grid_xy = _np.stack(_np.meshgrid(gx, gy), axis=-1).reshape(-1, 2)
+                # Nearest neighbor errors
+                try:
+                    tree = cKDTree(grid_xy)
+                    dists, _ = tree.query(proj_xy, k=1)
+                except Exception:
+                    dists = _np.linalg.norm(proj_xy[:, None, :] - grid_xy[None, :, :], axis=2).min(axis=1)
+                rmse = float(_np.sqrt(_np.mean(dists**2))) if dists.size else 0.0
+                # Visualization
+                vis = _np.zeros((proj_h, proj_w, 3), _np.uint8)
+                for y in range(cell//2, proj_h, cell):
+                    cv2.line(vis, (0, y), (proj_w-1, y), (64,64,64), 1)
+                for x in range(cell//2, proj_w, cell):
+                    cv2.line(vis, (x, 0), (x, proj_h-1), (64,64,64), 1)
+                for (x, y) in proj_xy.astype(_np.int32):
+                    if 0 <= x < proj_w and 0 <= y < proj_h:
+                        cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 255), -1)
+                cv2.putText(vis, f"Calib RMSE: {rmse:.2f} px", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
+                pm = _to_pix(vis); sl_pix.setPixmap(pm); sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+            except Exception as e:
+                QMessageBox.critical(dlg, "Calibration Characterization", str(e))
+
+        def _on_capture_evaluate():
+            # Structured-light LUT: project prewarped grid, capture, and overlap
+            try:
+                from calibration import prewarp_with_inverse_lut as _prewarp
+            except Exception:
+                _prewarp = None
+            inv_x, inv_y, _ = _load_luts()
+            if inv_x is None or _prewarp is None:
+                QMessageBox.warning(dlg, "LUT Missing", "cam_from_proj LUTs not available. Run SL calibration first.")
+                return
+            # Build grid with chosen cell
+            cam_w, cam_h = _infer_cam_size()
+            try:
+                _cell = max(4, int(sp_cell.value()))
+            except Exception:
+                _cell = 16
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            grid_rgb = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
+            proj_h, proj_w = inv_x.shape
+            warped = _prewarp(grid_rgb, inv_x, inv_y, proj_w, proj_h)
+            # Try to project via engine; fallback to local window
+            sent = _send_to_engine_gray(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY))
+            if not sent:
+                try:
+                    if not self._ensure_projection():
+                        raise RuntimeError("Projection window unavailable")
+                    self.projection.show_image_raw_no_warp_no_flip(warped)
+                except Exception:
+                    pass
+            # Short wait and capture
+            try:
+                import time as _t
+                _t.sleep(0.15)
+            except Exception:
+                pass
+            cap = _capture_gray()
+            if cap is None:
+                QMessageBox.warning(dlg, "Capture Failed", "Could not read snapshot.")
+                return
+            if cap.shape[:2] != (cam_h, cam_w):
+                try:
+                    cap = cv2.resize(cap, (cam_w, cam_h), interpolation=cv2.INTER_AREA)
+                except Exception:
+                    pass
+            # Build binary masks and overlap vis
+            try:
+                _, cap_bin = cv2.threshold(cap, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            except Exception:
+                cap_bin = (cap > 128).astype(_np.uint8) * 255
+            grid_bin = (grid > 128).astype(_np.uint8) * 255
+            both = ((cap_bin == 255) & (grid_bin == 255))
+            xor  = ((cap_bin == 255) ^ (grid_bin == 255))
+            vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
+            vis[both] = (0, 255, 0)
+            vis[xor]  = (0, 0, 255)
+            diff = (cap_bin.astype(_np.int16) - grid_bin.astype(_np.int16)).astype(_np.float32)
+            mse = float(_np.mean((diff/255.0)**2)) * (255.0*255.0)
+            psnr = 99.0 if mse <= 1e-9 else float(10.0 * _np.log10((255.0*255.0)/mse))
+            try:
+                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
+            except Exception:
+                pass
+            # Update preview with overlap and store ref/cap for view toggles
+            try:
+                _h_last_grid['img'] = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
+                _h_last_cap['img']  = cv2.cvtColor(_np.clip(cap, 0, 255).astype(_np.uint8), cv2.COLOR_GRAY2BGR)
+                _h_last_overlap['img'] = vis
+                # Preserve current zoom on toggles; fit only once for new set
+                _h_view_fit = {'done': False}
+                pm = _to_pix(vis)
+                sl_pix.setPixmap(pm)
+                sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
+                _h_view_fit['done'] = True
+            except Exception:
+                pass
 
         def _on_round_trip():
             try:
@@ -1223,6 +1665,7 @@ class Interface(QtWidgets.QMainWindow):
         btn_proj.clicked.connect(_on_project_grid)
         btn_eval.clicked.connect(_on_capture_evaluate)
         btn_rterr.clicked.connect(_on_round_trip)
+        btn_calib_char.clicked.connect(_on_calib_char)
 
         def _send_to_engine_gray(img_gray):
             try:

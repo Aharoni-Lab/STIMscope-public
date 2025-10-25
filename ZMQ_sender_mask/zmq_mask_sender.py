@@ -152,7 +152,7 @@ def build_patterns(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--endpoint", default="tcp://127.0.0.1:5558")
-    ap.add_argument("--fps", type=float, default=60.0)
+    ap.add_argument("--fps", type=float, default=30.0)
     ap.add_argument("--pattern", default="moving_bar",
                     choices=["moving_bar", "checkerboard", "solid", "circle", "gradient", "image", "folder", "segmask"]) 
     ap.add_argument("--speed", type=float, default=400.0)

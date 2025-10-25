@@ -184,6 +184,15 @@ class GPU(QtWidgets.QWidget):
         except Exception:
             pass
 
+        # Inference tools window
+        try:
+            self._button_inference = QtWidgets.QPushButton("Inference")
+            self._button_inference.setToolTip("Open inference tools")
+            self._button_inference.clicked.connect(self._open_inference_window)
+            grid.addWidget(self._button_inference, row, 3)
+        except Exception:
+            pass
+
         self.layout.addLayout(grid)
 
 
@@ -502,6 +511,250 @@ class GPU(QtWidgets.QWidget):
         except Exception as e:
             print(f"Error stopping live trace extractor: {e}")
 
+
+    def _open_inference_window(self):
+        try:
+            dlg = QtWidgets.QDialog(self)
+            dlg.setWindowTitle("Inference Tools")
+            lay = QtWidgets.QVBoxLayout(dlg)
+
+            info = QtWidgets.QLabel("Find top-5 active ROIs over last 20s and project a temporary mask")
+            lay.addWidget(info)
+
+            btn_silence = QtWidgets.QPushButton("Silence")
+            lay.addWidget(btn_silence)
+
+            def on_silence():
+                try:
+                    self._perform_silence_procedure()
+                except Exception as e:
+                    print(f"Silence failed: {e}")
+            btn_silence.clicked.connect(on_silence)
+
+            close_btn = QtWidgets.QPushButton("Close")
+            close_btn.clicked.connect(dlg.accept)
+            lay.addWidget(close_btn)
+
+            dlg.setLayout(lay)
+            dlg.resize(360, 140)
+            dlg.show()
+        except Exception as e:
+            print(f"Inference window error: {e}")
+
+    def _get_main_interface(self):
+        try:
+            p = self.parent()
+            # Walk up until we find the main Interface that owns mask sender controls
+            depth = 0
+            while p is not None and depth < 6:
+                if hasattr(p, '_toggle_send_masks'):
+                    return p
+                p = getattr(p, 'parent', lambda: None)()
+                depth += 1
+        except Exception:
+            pass
+        return None
+
+    def _perform_silence_procedure(self):
+        # Run silence workflow off the UI thread to avoid freezes
+        try:
+            threading.Thread(target=self._silence_worker, daemon=True).start()
+        except Exception as e:
+            print(f"Failed to start silence worker: {e}")
+
+    def _silence_worker(self):
+        # Compute top-5 active ROIs by mean amplitude over last ~20s using current buffers
+        try:
+            if self.live_extractor is None:
+                print("Live extractor not running; cannot compute activity")
+                return
+            # Estimate frames for ~20 seconds
+            try:
+                fps = float(getattr(self.live_extractor, '_last_fps_est', 30.0))
+                if not np.isfinite(fps) or fps <= 0:
+                    fps = 30.0
+            except Exception:
+                fps = 30.0
+            window_frames = int(max(1, round(20.0 * fps)))
+
+            # Collect averages
+            roi_avgs = []
+            for rid, buf in self.live_extractor.buffers.items():
+                if not buf:
+                    continue
+                data = list(buf)
+                if len(data) > window_frames:
+                    data = data[-window_frames:]
+                try:
+                    m = float(np.mean(np.asarray(data, dtype=np.float32)))
+                except Exception:
+                    continue
+                roi_avgs.append((rid, m))
+            if not roi_avgs:
+                print("No ROI traces available to rank activity")
+                return
+            roi_avgs.sort(key=lambda x: x[1], reverse=True)
+            top5 = [rid for rid, _ in roi_avgs[:5]]
+            print(f"Top-5 active ROIs (20s mean): {top5}")
+
+            # Build binary mask image: only footprints for top5
+            try:
+                labels = None
+                # Prefer in-memory labels from ROI discovery/editor
+                labels = getattr(self, 'current_labels', None)
+                if labels is None:
+                    # Load from saved rois.npz
+                    labels = np.load(self.rois_path)["labels"].astype(np.int32)
+            except Exception:
+                labels = np.load(self.rois_path)["labels"].astype(np.int32)
+
+            if labels.ndim != 2:
+                print("labels must be 2D to build mask")
+                return
+            if not top5:
+                print("No top ROIs available to build mask")
+                return
+            mask = np.isin(labels, np.array(top5, dtype=np.int32)).astype(np.uint8) * 255
+
+            # Pause current mask streaming (e.g., moving bar) if running, and remember state
+            iface = self._get_main_interface()
+            was_streaming = False
+            if iface is not None and getattr(iface, '_proc_masks', None) is not None:
+                was_streaming = True
+                try:
+                    # request stop on the main thread
+                    try:
+                        QtCore.QTimer.singleShot(0, lambda: iface._toggle_send_masks())
+                    except Exception:
+                        iface._toggle_send_masks()
+                    # wait briefly until process is fully torn down to avoid toggle race (no UI blocking)
+                    t0 = time.time()
+                    while getattr(iface, '_proc_masks', None) is not None and (time.time() - t0) < 1.0:
+                        time.sleep(0.02)
+                except Exception as e_stop:
+                    print(f"Could not stop mask sender: {e_stop}")
+
+            # Build image to send that matches current warp mode and projector size
+            proj_img_gray = None
+            mode = getattr(iface, '_proj_warp_mode', 'NONE') if iface is not None else 'NONE'
+
+            def _pad_or_resize_to_wh(img_gray: np.ndarray, W: int, H: int) -> np.ndarray:
+                try:
+                    ih, iw = img_gray.shape[:2]
+                    if ih <= H and iw <= W:
+                        pad_top = (H - ih) // 2
+                        pad_bottom = H - ih - pad_top
+                        pad_left = (W - iw) // 2
+                        pad_right = W - iw - pad_left
+                        try:
+                            return cv2.copyMakeBorder(img_gray, pad_top, pad_bottom, pad_left, pad_right, borderType=cv2.BORDER_CONSTANT, value=0)
+                        except Exception:
+                            return np.pad(img_gray, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant', constant_values=0)
+                    else:
+                        return cv2.resize(img_gray, (W, H), interpolation=cv2.INTER_NEAREST)
+                except Exception:
+                    return cv2.resize(img_gray, (W, H), interpolation=cv2.INTER_NEAREST)
+
+            # Target projector canvas
+            target_W, target_H = 1920, 1080
+            try:
+                from projector_client import ProjectorClient as _PC
+                target_W, target_H = int(getattr(_PC(), 'width', 1920)), int(getattr(_PC(), 'height', 1080))
+            except Exception:
+                target_W, target_H = 1920, 1080
+
+            if mode == 'LUT':
+                # Prewarp using inverse LUT and clear H to avoid double warp
+                try:
+                    from pathlib import Path
+                    asset_dir = getattr(self.camera, 'asset_dir', str((Path(__file__).resolve().parent / "Assets" / "Generated").resolve()))
+                    inv_x = np.load("/".join([asset_dir, "cam_from_proj_x.npy"]))
+                    inv_y = np.load("/".join([asset_dir, "cam_from_proj_y.npy"]))
+                    proj_h, proj_w = inv_x.shape
+                    from calibration import prewarp_with_inverse_lut
+                    mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+                    warped = prewarp_with_inverse_lut(mask_bgr, inv_x.astype(np.float32), inv_y.astype(np.float32), proj_w, proj_h)
+                    proj_img_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+                    # Clear H so engine does not warp
+                    try:
+                        import zmq as _zmq
+                        _ctx = _zmq.Context.instance(); _s = _ctx.socket(_zmq.REQ)
+                        _s.setsockopt(_zmq.LINGER, 0)
+                        _s.connect("tcp://127.0.0.1:5560"); _s.send(b"IDENTITY"); _ = _s.recv(); _s.close()
+                    except Exception:
+                        pass
+                except Exception as pw_err:
+                    print(f"Prewarp failed, fallback to pad/resize: {pw_err}")
+                    proj_img_gray = _pad_or_resize_to_wh(mask, target_W, target_H)
+            else:
+                # H or NONE: keep engine mapping; just provide same canvas size as current projection
+                proj_img_gray = _pad_or_resize_to_wh(mask, target_W, target_H)
+
+            # Send over ZMQ to projection engine for ~2 seconds
+            try:
+                from projector_client import ProjectorClient
+                client = ProjectorClient()
+                client.send_gray(proj_img_gray, frame_id=60001, immediate=True)
+            except Exception as e:
+                print(f"Projector client send failed: {e}")
+                try:
+                    client.close()
+                except Exception:
+                    pass
+                # Attempt to resume if we had stopped sender
+                if was_streaming and iface is not None:
+                    try:
+                        # Restore engine mapping if H-mode was active
+                        mode = getattr(iface, '_proj_warp_mode', 'NONE')
+                        if mode == 'H' and hasattr(iface, '_send_hmatrix_to_projector'):
+                            iface._send_hmatrix_to_projector()
+                        try:
+                            QtCore.QTimer.singleShot(0, lambda: iface._toggle_send_masks())
+                        except Exception:
+                            iface._toggle_send_masks()
+                    except Exception:
+                        pass
+                return
+
+            # Hold for ~2s
+            time.sleep(2.0)
+
+            try:
+                client.close()
+            except Exception:
+                pass
+
+            # Resume previous streaming if it was running
+            if was_streaming and iface is not None:
+                try:
+                    # Restore engine mapping if H-mode was active previously
+                    mode = getattr(iface, '_proj_warp_mode', 'NONE')
+                    if mode == 'H' and hasattr(iface, '_send_hmatrix_to_projector'):
+                        iface._send_hmatrix_to_projector()
+                    # ensure we only start when not already running
+                    if getattr(iface, '_proc_masks', None) is None:
+                        try:
+                            QtCore.QTimer.singleShot(0, lambda: iface._toggle_send_masks())
+                        except Exception:
+                            iface._toggle_send_masks()
+                    # wait to confirm started; attempt a retry if needed (no UI blocking)
+                    t0 = time.time()
+                    while getattr(iface, '_proc_masks', None) is None and (time.time() - t0) < 1.0:
+                        time.sleep(0.03)
+                    if getattr(iface, '_proc_masks', None) is None:
+                        # one more attempt
+                        try:
+                            QtCore.QTimer.singleShot(0, lambda: iface._toggle_send_masks())
+                        except Exception:
+                            try:
+                                iface._toggle_send_masks()
+                            except Exception:
+                                pass
+                except Exception as e_start:
+                    print(f"Failed to resume mask sender: {e_start}")
+            print("✅ Silence mask projected for ~2s and previous stream resumed")
+        except Exception as e:
+            print(f"Silence procedure error: {e}")
 
     
     @pyqtSlot(object, object)

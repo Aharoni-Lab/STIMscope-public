@@ -90,6 +90,7 @@ static int  OVERLAY_CELL  = 12;     // scale unit in pixels (smaller digits)
 static int  OVERLAY_OFF_X = 520;    // offset from left in pixels
 static int  OVERLAY_OFF_Y = 380;    // offset from top in pixels
 static bool OVERLAY_BG    = true;   // black background plate
+static bool OVERLAY_FLIP_X = false; // mirror overlay digits horizontally (mask unaffected)
 
 // bottom row mode: 0 mask id, 1 proj index, 2 none
 static int OVERLAY_BOTTOM_MODE = 0;
@@ -382,6 +383,9 @@ static void ensure_gpu_pipeline(){
         uniform vec2 uSize; // (W, H)
         uniform mat3 uHinv; // optional direct homography
         uniform int  uUseLut; // 1: LUT path, 0: analytic H
+        uniform sampler2D uOverlay;    // overlay uploaded at screen resolution
+        uniform int       uUseOverlay; // 1 if overlay present in PBO
+        uniform int       uFlipX;      // 1 to mirror horizontally
         void main(){
             // Compute LUT sampling coords from window-space fragment, matching CPU's top-left indexing
             float W = uSize.x;
@@ -410,7 +414,13 @@ static void ensure_gpu_pipeline(){
             }
             if (u < 0.0 || v < 0.0){ gl_FragColor = vec4(0.0); return; }
             float m = texture2D(uMask, vec2(u, v)).r;
-            gl_FragColor = vec4(m, m, m, 1.0);
+            float o = 0.0;
+            if (uUseOverlay == 1){
+                float um = (uFlipX == 1) ? (1.0 - u) : u;
+                o = texture2D(uOverlay, vec2(um, v)).r;
+            }
+            float outv = max(m, o);
+            gl_FragColor = vec4(outv, outv, outv, 1.0);
         }
     )";
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vsrc);
@@ -490,6 +500,7 @@ static void ensure_gpu_pipeline(){
     GLint loc_use = glGetUniformLocation(g_gpu_prog, "uUseLut");
     if (loc_use >= 0) glUniform1i(loc_use, g_use_lut ? 1 : 0);
     if (g_loc_uLut >= 0)  glUniform1i(g_loc_uLut, 2);
+    if (g_loc_uOverlay >= 0) glUniform1i(g_loc_uOverlay, 1);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, g_lut_tex);
 }
@@ -616,18 +627,30 @@ static bool draw_mask_gpu(const unsigned char* data,
                     std::memset(dst, 0, (size_t)run);
                 }
             }
+            // Flip glyph rows when mask path flips horizontally so glyphs read correctly.
+            // Allow explicit overlay flip to toggle behavior via XOR.
+            bool ov_flip = ((OVERLAY_FLIP_X ? 1 : 0) ^ (HORIZ_FLIP ? 1 : 0)) != 0;
             for (int y = 0; y < ov_h; ++y){
                 int dy = offY + y;
                 if (dy < 0 || dy >= HEIGHT) continue;
                 int sx0 = 0;
-                int dx0 = offX;
+                int dx0 = HORIZ_FLIP ? (WIDTH - offX - ov_w) : offX;
                 int run = ov_w;
                 if (dx0 < 0){ sx0 -= dx0; run += dx0; dx0 = 0; }
                 if (dx0 + run > WIDTH){ run = WIDTH - dx0; }
                 if (run <= 0) continue;
-                const unsigned char* src = ov_px + (size_t)y * (size_t)ov_w + (size_t)sx0;
+                const unsigned char* row = ov_px + (size_t)y * (size_t)ov_w;
                 unsigned char* dst = base + (size_t)dy * (size_t)WIDTH + (size_t)dx0;
-                for (int i = 0; i < run; ++i){ if (src[i] > dst[i]) dst[i] = src[i]; }
+                if (!ov_flip){
+                    const unsigned char* src = row + (size_t)sx0;
+                    for (int i = 0; i < run; ++i){ if (src[i] > dst[i]) dst[i] = src[i]; }
+                } else {
+                    for (int i = 0; i < run; ++i){
+                        int sx = ov_w - 1 - (sx0 + i);
+                        unsigned char s = row[(size_t)sx];
+                        if (s > dst[i]) dst[i] = s;
+                    }
+                }
             }
         }
     }
@@ -652,6 +675,8 @@ static bool draw_mask_gpu(const unsigned char* data,
     if (g_loc_uHinv >= 0)   glUniformMatrix3fv(g_loc_uHinv, 1, GL_TRUE, Hinvf);
     if (g_loc_uSize >= 0)   glUniform2f(g_loc_uSize, (GLfloat)WIDTH, (GLfloat)HEIGHT);
     if (g_loc_uFlipX >= 0)  glUniform1i(g_loc_uFlipX, HORIZ_FLIP?1:0);
+    GLint locFlip = glGetUniformLocation(g_gpu_prog, "uFlipX");
+    if (locFlip >= 0) glUniform1i(locFlip, HORIZ_FLIP?1:0);
     // draw
     glEnableVertexAttribArray((GLuint)g_loc_aPos);
     glBindBuffer(GL_ARRAY_BUFFER, g_gpu_vbo);
@@ -950,7 +975,11 @@ static void draw_overlay_pixels(const unsigned char* px, int ow, int oh, int off
     glDisable(GL_BLEND);
     glDisable(GL_DITHER);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glPixelZoom(1.0f, 1.0f);
+    // Ensure fixed-function path for glDrawPixels (avoid active shader affecting fragment stage)
+    glUseProgram(0);
+    // For non-H path, counteract global HORIZ_FLIP so glyphs read correctly. XOR with OVERLAY_FLIP_X.
+    float sx = (((OVERLAY_FLIP_X ? 1 : 0) ^ (HORIZ_FLIP ? 1 : 0)) ? -1.0f : 1.0f);
+    glPixelZoom(sx, 1.0f);
 
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     glOrtho(0, winW, 0, winH, -1, 1);
@@ -971,7 +1000,7 @@ static void draw_overlay_pixels(const unsigned char* px, int ow, int oh, int off
         glColor3f(1.f, 1.f, 1.f);
     }
 
-    glRasterPos2i(x, y);
+    glRasterPos2i((sx < 0.f) ? (x + ow) : x, y);
     glDrawPixels(ow, oh, GL_LUMINANCE, GL_UNSIGNED_BYTE, px);
 
     glPopMatrix();
@@ -1453,6 +1482,7 @@ static void parse_cli(int argc, char** argv){
         else if (starts("--overlay-cell="))   OVERLAY_CELL   = std::max(4, safe_stoi(a.substr(15), OVERLAY_CELL, "overlay-cell"));
         else if (starts("--overlay-pos="))    parse_pos_pair(a.substr(14), OVERLAY_OFF_X, OVERLAY_OFF_Y);
         else if (starts("--overlay-bg="))     OVERLAY_BG     = safe_stoi(a.substr(13), OVERLAY_BG?1:0, "overlay-bg") != 0;
+        else if (starts("--overlay-flip-x=")) OVERLAY_FLIP_X = safe_stoi(a.substr(18), OVERLAY_FLIP_X?1:0, "overlay-flip-x") != 0;
         else if (starts("--overlay-bottom=")){
             auto v = trim(a.substr(17));
             if      (v=="mask") OVERLAY_BOTTOM_MODE = 0;
@@ -1508,6 +1538,7 @@ static void parse_cli(int argc, char** argv){
         " , overlay-cell=", OVERLAY_CELL,
         " , overlay-pos=", OVERLAY_OFF_X, ",", OVERLAY_OFF_Y,
         " , overlay-bg=", (OVERLAY_BG?1:0),
+        " , overlay-flip-x=", (OVERLAY_FLIP_X?1:0),
         " , overlay-bottom=", (OVERLAY_BOTTOM_MODE==0?"mask":OVERLAY_BOTTOM_MODE==1?"proj":"none"),
         " , cam-ts-offset-us=", CAM_TS_OFFSET_US,
         " , map-eps-us=", MAP_EPS_US,
@@ -1633,7 +1664,7 @@ int main(int argc, char** argv){
                     // Apply homography mapping if available
                     static std::vector<unsigned char> warped;
                     bool use_h = g_h_ready.load();
-                    if (use_h){
+    if (use_h){
                         if (WARP_BILINEAR) warp_mask_bilinear(ptr, warped);
                         else warp_mask_nn(ptr, warped);
                     }
@@ -1688,6 +1719,7 @@ int main(int argc, char** argv){
                         bool gused = false;
                         // Prefer LUT (fast) path; shader can also fall back to analytic H
                         g_use_lut = 1;
+                        // Draw mask via GPU warp and composite overlay into same PBO so overlay is H-warped
                         if (VISIBLE_ID && ov_w>0 && ov_h>0){
                             gused = draw_mask_gpu(ptr, ov.data(), ov_w, ov_h, OVERLAY_OFF_X, OVERLAY_OFF_Y);
                         } else {
