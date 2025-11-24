@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import os
@@ -83,13 +82,13 @@ def qimage_to_gray_np(qimg: QImage) -> np.ndarray:
 
     if fmt in (QImage.Format_ARGB32, QImage.Format_RGBA8888):
         arr = buf.reshape((height, width, 4))
-        gray = cv2.cvtColor(arr, cv2.COLOR_BGRA2GRAY)
-        return gray
+        # Use green channel for fluorescence
+        return arr[:, :, 1]
 
     if fmt == QImage.Format_RGB888:
         arr = buf.reshape((height, width, 3))
-        gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-        return gray
+        # Use green channel for fluorescence
+        return arr[:, :, 1]
 
     qimg = qimg.convertToFormat(QImage.Format_Grayscale8)
     ptr = qimg.bits(); ptr.setsize(qimg.byteCount())
@@ -187,12 +186,14 @@ class FrameProcessor(QThread):
             if hasattr(frame, "get_numpy_1D"): 
                 h, w = frame.Height(), frame.Width()
                 arr4 = np.array(frame.get_numpy_1D(), dtype=np.uint8).reshape((h, w, 4))
-                gray = arr4[..., 0]
+                # Use green channel for fluorescence
+                gray = arr4[..., 1]
             elif isinstance(frame, np.ndarray):
                 if frame.ndim == 2:
                     gray = frame
                 elif frame.ndim == 3 and frame.shape[2] >= 3:
-                    gray = frame[..., 0]
+                    # Use green channel for fluorescence
+                    gray = frame[..., 1]
                 else:
                     raise ValueError("Unsupported ndarray shape")
             elif isinstance(frame, QImage):
@@ -257,6 +258,10 @@ class LiveTraceExtractor(QObject):
         self._oasis_lambda = 0.0  # default sparsity; 0 -> ML
         self._oasis_prev_c: Dict[int, float] = {}
         self._oasis_prev_s: Dict[int, float] = {}
+        self._plot_norm_mode: str = "Raw"   # Raw | z-score (10s) | dF/F (10s)
+
+        # IDs highlighted (e.g., Silence top-5)
+        self._highlight_ids: Set[int] = set()
         self._labels_gpu = None
 
         self._frame_count = 0
@@ -331,6 +336,12 @@ class LiveTraceExtractor(QObject):
 
         self._start_monitors()
 
+        # Expose counts for UI (total ROIs, plotted cap)
+        try:
+            self.total_rois_extracted = int(self._roi_max)
+        except Exception:
+            self.total_rois_extracted = 0
+
 
 
         self._connect_camera_signals()
@@ -351,6 +362,19 @@ class LiveTraceExtractor(QObject):
             print(f"[OASIS] enabled={self._oasis_enabled} gamma={self._oasis_gamma} lambda={self._oasis_lambda}")
         except Exception as e:
             print(f"[OASIS] set failed: {e}")
+
+    def set_plot_normalization(self, mode: str):
+        try:
+            if isinstance(mode, str):
+                self._plot_norm_mode = mode
+        except Exception:
+            self._plot_norm_mode = "Raw"
+
+    def set_highlight_ids(self, ids: List[int]):
+        try:
+            self._highlight_ids = set(int(x) for x in ids)
+        except Exception:
+            self._highlight_ids = set()
 
 
 
@@ -1180,7 +1204,38 @@ class LiveTraceExtractor(QObject):
                                   / max(1e-6, getattr(self, '_last_fps_est', 30.0)))
                     else:
                         x_data = np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
-                    y_data = np.array(list(buffer), dtype=np.float32)
+                    y_raw = np.array(list(buffer), dtype=np.float32)
+                    # Apply optional normalization on a short window
+                    mode = getattr(self, '_plot_norm_mode', 'Raw')
+                    if mode.startswith('z-score'):
+                        w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                        yw = y_raw[-w:]
+                        mu = float(np.mean(yw))
+                        sd = float(np.std(yw)) if np.std(yw) > 1e-6 else 1.0
+                        y_data = (y_raw - mu) / sd
+                    elif mode.startswith('dF/F'):
+                        w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                        F0 = float(np.percentile(y_raw[-w:], 20)) if w > 3 else float(np.mean(y_raw))
+                        if abs(F0) < 1e-6:
+                            F0 = 1.0
+                        y_data = (y_raw - F0) / F0
+                    else:
+                        y_data = y_raw
+                    # Emphasize highlighted traces
+                    try:
+                        if roi_id in getattr(self, '_highlight_ids', set()):
+                            pen = self._plot_curves[roi_id].opts.get('pen', None)
+                            if pen is not None and hasattr(pen, 'setWidth'):
+                                pen.setWidth(3)
+                                self._plot_curves[roi_id].setPen(pen)
+                        else:
+                            # set thinner width for non-highlighted
+                            pen = self._plot_curves[roi_id].opts.get('pen', None)
+                            if pen is not None and hasattr(pen, 'setWidth'):
+                                pen.setWidth(1)
+                                self._plot_curves[roi_id].setPen(pen)
+                    except Exception:
+                        pass
                     self._plot_curves[roi_id].setData(x=x_data, y=y_data)
                     
                 except Exception as curve_error:
@@ -1202,6 +1257,29 @@ class LiveTraceExtractor(QObject):
             self._update_page_label_safe()
 
             self._update_legend_for_page(page_rois)
+
+            # Update trace info label in parent UI if available
+            try:
+                parent = self.plot_widget.parent() if self.plot_widget else None
+                # climb to GPU instance
+                gpu = None
+                d = 0
+                p = parent
+                while p is not None and d < 6:
+                    if hasattr(p, 'camera') and hasattr(p, 'plot_widget'):
+                        gpu = p
+                        break
+                    p = getattr(p, 'parent', lambda: None)()
+                    d += 1
+                if gpu is not None and hasattr(gpu, '_trace_info_label') and gpu._trace_info_label is not None:
+                    try:
+                        fps = getattr(self, '_last_fps_est', 0.0)
+                        total = getattr(self, 'total_rois_extracted', len(active_rois))
+                        gpu._trace_info_label.setText(f"Traces: {fps:.1f} fps | ROIs: {len(active_rois)}/{total}")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             
 
             # Update labels and dynamic x range
@@ -1389,10 +1467,29 @@ class LiveTraceExtractor(QObject):
                     buffer = list(self.buffers[roi_id])
                     if len(buffer) >= 2:
                         unified_color = self._get_unified_roi_color(roi_id)
-                        pen = pg.mkPen(color=unified_color, width=1.5, alpha=0.8)
+                        # default thin width for non-selected
+                        base_width = 1.0
+                        if roi_id in getattr(self, '_highlight_ids', set()):
+                            base_width = 3.0
+                        pen = pg.mkPen(color=unified_color, width=base_width, alpha=0.9 if base_width>1 else 0.8)
                         
                         x_data = np.arange(len(buffer), dtype=np.float32)
-                        y_data = np.array(buffer, dtype=np.float32)
+                        y_raw = np.array(buffer, dtype=np.float32)
+                        mode = getattr(self, '_plot_norm_mode', 'Raw')
+                        if mode.startswith('z-score'):
+                            w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                            yw = y_raw[-w:]
+                            mu = float(np.mean(yw))
+                            sd = float(np.std(yw)) if np.std(yw) > 1e-6 else 1.0
+                            y_data = (y_raw - mu) / sd
+                        elif mode.startswith('dF/F'):
+                            w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                            F0 = float(np.percentile(y_raw[-w:], 20)) if w > 3 else float(np.mean(y_raw))
+                            if abs(F0) < 1e-6:
+                                F0 = 1.0
+                            y_data = (y_raw - F0) / F0
+                        else:
+                            y_data = y_raw
                         
                         curve = self._expanded_plot.plot(x_data, y_data, pen=pen)
                         self._expanded_curves[roi_id] = curve
@@ -1423,6 +1520,26 @@ class LiveTraceExtractor(QObject):
             if legend_layout.count() > 0:
                 scroll_layout.addLayout(legend_layout)
             
+            # Selected IDs legend
+            try:
+                selected = sorted(list(getattr(self, '_highlight_ids', set())))
+                if selected:
+                    sel_label = QLabel(f"Selected (top-5): {selected}")
+                    sel_label.setStyleSheet("font-weight: bold; color: #1c1c1e; margin: 5px; font-size: 12px;")
+                    scroll_layout.addWidget(sel_label)
+            except Exception:
+                pass
+
+
+            # Show selected list
+            try:
+                selected = sorted(list(getattr(self, '_highlight_ids', set())))
+                if selected:
+                    sel_label = QLabel(f"Selected (top-5): {selected}")
+                    sel_label.setStyleSheet("font-weight: bold; color: #1c1c1e; margin: 5px; font-size: 12px;")
+                    scroll_layout.addWidget(sel_label)
+            except Exception:
+                pass
 
             total_label = QLabel(f"Total: {len(active_rois)} ROIs displayed")
             total_label.setStyleSheet("font-weight: bold; color: #333; margin: 5px; font-size: 12px;")
@@ -1467,8 +1584,31 @@ class LiveTraceExtractor(QObject):
                                           / max(1e-6, getattr(self, '_last_fps_est', 30.0)))
                             else:
                                 x_data = np.arange(start_idx, start_idx + len(buffer), dtype=np.float32)
-                            y_data = np.array(buffer, dtype=np.float32)
+                            y_raw = np.array(buffer, dtype=np.float32)
+                            mode = getattr(self, '_plot_norm_mode', 'Raw')
+                            if mode.startswith('z-score'):
+                                w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                                yw = y_raw[-w:]
+                                mu = float(np.mean(yw))
+                                sd = float(np.std(yw)) if np.std(yw) > 1e-6 else 1.0
+                                y_data = (y_raw - mu) / sd
+                            elif mode.startswith('dF/F'):
+                                w = int(max(3, min(len(y_raw), int(max(1, getattr(self, '_last_fps_est', 30.0)) * 10))))
+                                F0 = float(np.percentile(y_raw[-w:], 20)) if w > 3 else float(np.mean(y_raw))
+                                if abs(F0) < 1e-6:
+                                    F0 = 1.0
+                                y_data = (y_raw - F0) / F0
+                            else:
+                                y_data = y_raw
                             curve.setData(x=x_data, y=y_data, skipFiniteCheck=True)
+                            # Re-apply highlight width each update
+                            try:
+                                pen = curve.opts.get('pen', None)
+                                if pen is not None and hasattr(pen, 'setWidth'):
+                                    pen.setWidth(3 if roi_id in getattr(self, '_highlight_ids', set()) else 1)
+                                    curve.setPen(pen)
+                            except Exception:
+                                pass
                         except Exception:
                             pass  
             

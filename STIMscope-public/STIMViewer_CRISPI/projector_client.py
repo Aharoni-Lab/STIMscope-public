@@ -61,10 +61,9 @@ class ProjectorClient:
                 json.dumps(meta).encode("utf-8"),
                 memoryview(img_gray)
             ], copy=False)
-            # If pacing to projector triggers, wait to observe the vis_id change once
-            if immediate and self._sub is not None:
+            # Best-effort: drain status to keep SUB pipe fresh, but don't block
+            if self._sub is not None:
                 try:
-                    # Drain one status frame opportunistically (non-blocking)
                     _ = self._sub.recv(flags=self._zmq.NOBLOCK)
                 except Exception:
                     pass
