@@ -117,7 +117,7 @@ int main(int argc, char** argv){
                         int py0 = y + ry*scale;
                         for (int sy = 0; sy < scale; ++sy){
                             int yy = py0 + sy; if (yy < 0 || yy >= H) continue;
-                            uint8_t* row = img.data() + (size_t)yy * (size_t)W;
+                            uint8_t* row = img.data() + (size_t)(H - 1 - yy) * (size_t)W;
                             for (int sx = 0; sx < scale; ++sx){
                                 int xx = px0 + sx; if (xx < 0 || xx >= W) continue;
                                 row[xx] = 255;

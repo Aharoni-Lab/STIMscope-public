@@ -1141,6 +1141,76 @@ class Interface(QtWidgets.QMainWindow):
         sl_pix = QGraphicsPixmapItem()
         sl_scene.addItem(sl_pix)
         lay.addWidget(sl_view)
+        # Save current calibration preview (original resolution) as TIFF
+        try:
+            from PyQt5.QtWidgets import QFileDialog, QMessageBox
+            btn_save_tiff = QPushButton("Save Current View (TIFF)")
+            try:
+                btn_save_tiff.setToolTip("Save the current calibration preview image at original resolution in .tiff format")
+            except Exception:
+                pass
+            def _on_save_current_tiff():
+                try:
+                    pm = sl_pix.pixmap()
+                    if pm is None or pm.isNull():
+                        QMessageBox.warning(dlg, "Save Image", "No image available to save.")
+                        return
+                    try:
+                        save_dir = getattr(self._camera, 'save_dir', './Saved_Media')
+                    except Exception:
+                        save_dir = './Saved_Media'
+                    try:
+                        os.makedirs(save_dir, exist_ok=True)
+                    except Exception:
+                        pass
+                    default_name = time.strftime("calibration_%Y%m%d_%H%M%S.tiff")
+                    fp, _ = QFileDialog.getSaveFileName(
+                        dlg,
+                        "Save Calibration Image (TIFF)",
+                        os.path.join(save_dir, default_name),
+                        "TIFF Image (*.tiff *.tif);;All Files (*)"
+                    )
+                    if not fp:
+                        return
+                    # Ensure .tiff extension
+                    fpl = fp.lower()
+                    if not (fpl.endswith(".tiff") or fpl.endswith(".tif")):
+                        fp = fp + ".tiff"
+                    ok = False
+                    try:
+                        ok = pm.save(fp, "TIFF")
+                    except Exception:
+                        ok = False
+                    if not ok:
+                        try:
+                            qimg = pm.toImage()
+                            ok = qimg.save(fp, "TIFF")
+                        except Exception:
+                            ok = False
+                    if not ok:
+                        QMessageBox.warning(dlg, "Save Failed", "Could not save image to TIFF.")
+                        return
+                    QMessageBox.information(dlg, "Saved", f"Saved image:\n{fp}")
+                except Exception as _e:
+                    try:
+                        QMessageBox.warning(dlg, "Save Failed", str(_e))
+                    except Exception:
+                        print(f"[TSAVE] Save failed: {_e}")
+            btn_save_tiff.clicked.connect(_on_save_current_tiff)
+            lay.addWidget(btn_save_tiff)
+        except Exception as _e:
+            print(f"[TSAVE] Save button init failed: {_e}")
+
+        # Metrics output (textbox - not on top of the image)
+        metrics_lbl = QLabel("Metrics / Logs:")
+        metrics_box = QtWidgets.QPlainTextEdit(dlg)
+        try:
+            metrics_box.setReadOnly(True)
+            metrics_box.setMaximumHeight(120)
+        except Exception:
+            pass
+        lay.addWidget(metrics_lbl)
+        lay.addWidget(metrics_box)
 
         def _to_pix(img_bgr):
             try:
@@ -1184,12 +1254,32 @@ class Interface(QtWidgets.QMainWindow):
             except Exception:
                 return 1920, 1080
 
-        def _make_cam_grid(cam_w, cam_h, cell=32):
+        def _make_cam_grid(cam_w, cam_h, cell=32, pitch=None):
+            """
+            Build a binary checkerboard-like grid image in camera space.
+            - cell: side length of each bright square in pixels
+            - pitch: center-to-center spacing (>= cell). If None or <= cell, fall back to contiguous chessboard.
+            """
             g = _np.zeros((cam_h, cam_w), _np.uint8)
-            for y in range(0, cam_h, cell):
-                for x in range(0, cam_w, cell):
-                    if ((x//cell)+(y//cell)) & 1:
-                        g[y:y+cell, x:x+cell] = 255
+            cell = int(max(1, cell))
+            if pitch is None or int(pitch) <= cell:
+                # Classic contiguous checkerboard
+                for y in range(0, cam_h, cell):
+                    for x in range(0, cam_w, cell):
+                        if ((x//cell)+(y//cell)) & 1:
+                            y1 = min(y+cell, cam_h)
+                            x1 = min(x+cell, cam_w)
+                            g[y:y1, x:x1] = 255
+                return g
+            # Spaced squares with given pitch (>= cell)
+            pitch = int(max(cell, int(pitch)))
+            for y in range(0, cam_h, pitch):
+                for x in range(0, cam_w, pitch):
+                    # Alternate parity across pitched grid cells
+                    if ((x//pitch) + (y//pitch)) & 1:
+                        y1 = min(y+cell, cam_h)
+                        x1 = min(x+cell, cam_w)
+                        g[y:y1, x:x1] = 255
             return g
 
         def _on_project_grid():
@@ -1202,10 +1292,14 @@ class Interface(QtWidgets.QMainWindow):
                 return
             cam_w, cam_h = _infer_cam_size()
             try:
-                _cell = max(4, int(sp_cell.value()))
+                _cell = max(1, int(sp_cell.value()))
             except Exception:
                 _cell = 16
-            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            try:
+                _pitch = max(_cell, int(sp_pitch.value()))
+            except Exception:
+                _pitch = _cell
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell, pitch=_pitch)
             proj_h, proj_w = inv_x.shape
             warped = _prewarp(cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR), inv_x, inv_y, proj_w, proj_h)
             # Prefer sending to the projection engine to avoid GL/X context conflicts
@@ -1250,14 +1344,37 @@ class Interface(QtWidgets.QMainWindow):
         lbl_cell = QLabel("Cell (px):")
         sp_cell = QtWidgets.QSpinBox(dlg)
         try:
-            sp_cell.setRange(4, 256)
-            sp_cell.setSingleStep(2)
+            sp_cell.setRange(1, 256)
+            sp_cell.setSingleStep(1)
             sp_cell.setValue(16)
             sp_cell.setToolTip("Grid square size in camera pixels")
         except Exception:
             pass
         h_row.addWidget(lbl_cell, 0, 2)
         h_row.addWidget(sp_cell, 0, 3)
+        # Pitch control (>= Cell)
+        lbl_pitch = QLabel("Pitch (px):")
+        sp_pitch = QtWidgets.QSpinBox(dlg)
+        try:
+            sp_pitch.setRange(1, 512)
+            sp_pitch.setSingleStep(1)
+            sp_pitch.setValue(int(sp_cell.value()))
+            sp_pitch.setToolTip("Center-to-center spacing of squares; must be >= Cell")
+        except Exception:
+            pass
+        def _sync_pitch_min():
+            try:
+                sp_pitch.setMinimum(int(sp_cell.value()))
+                if int(sp_pitch.value()) < int(sp_cell.value()):
+                    sp_pitch.setValue(int(sp_cell.value()))
+            except Exception:
+                pass
+        try:
+            sp_cell.valueChanged.connect(_sync_pitch_min)
+        except Exception:
+            pass
+        h_row.addWidget(lbl_pitch, 0, 5)
+        h_row.addWidget(sp_pitch, 0, 6)
         lay.addLayout(h_row)
 
         def _on_h_project_grid():
@@ -1272,10 +1389,14 @@ class Interface(QtWidgets.QMainWindow):
                 return
             cam_w, cam_h = _infer_cam_size()
             try:
-                _cell = max(4, int(sp_cell.value()))
+                _cell = max(1, int(sp_cell.value()))
             except Exception:
                 _cell = 16
-            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            try:
+                _pitch = max(_cell, int(sp_pitch.value()))
+            except Exception:
+                _pitch = _cell
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell, pitch=_pitch)
             img = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
             # Ensure local projector window exists and use H path (no LUT)
             if not self._ensure_projection():
@@ -1305,6 +1426,48 @@ class Interface(QtWidgets.QMainWindow):
         _h_last_overlap = {'img': None}
         # Track whether we've fitted the view once for this set; preserves zoom on toggles
         _h_view_fit = {'done': False}
+
+        # Crosstalk metric: mean/p95 of neighbor(off)/on intensities across pitched grid
+        def _compute_crosstalk(cap_gray, cell, pitch):
+            try:
+                import numpy as _np
+            except Exception:
+                return None
+            if cap_gray is None or getattr(cap_gray, 'ndim', 0) != 2:
+                return None
+            h, w = cap_gray.shape
+            cell = int(max(1, int(cell)))
+            pitch = int(max(cell, int(pitch)))
+            img = cap_gray.astype(_np.float32)
+            ratios = []
+            on_means = []
+            off_means = []
+            for y0 in range(0, h - cell + 1, pitch):
+                for x0 in range(0, w - cell + 1, pitch):
+                    if ((x0 // pitch) + (y0 // pitch)) & 1:
+                        on_roi = img[y0:y0+cell, x0:x0+cell]
+                        on_mean = float(on_roi.mean())
+                        if on_mean <= 1e-6:
+                            continue
+                        for dx, dy in ((pitch,0),(-pitch,0),(0,pitch),(0,-pitch)):
+                            xn = x0 + dx; yn = y0 + dy
+                            if xn < 0 or yn < 0 or xn + cell > w or yn + cell > h:
+                                continue
+                            off_roi = img[yn:yn+cell, xn:xn+cell]
+                            off_mean = float(off_roi.mean())
+                            ratios.append(off_mean / on_mean)
+                            on_means.append(on_mean)
+                            off_means.append(off_mean)
+            if not ratios:
+                return None
+            ratios = _np.array(ratios, dtype=_np.float32)
+            return {
+                'ratio_mean': float(_np.mean(ratios)),
+                'ratio_p95': float(_np.percentile(ratios, 95)),
+                'samples': int(ratios.size),
+                'on_mean': float(_np.mean(on_means)) if on_means else 0.0,
+                'off_mean': float(_np.mean(off_means)) if off_means else 0.0
+            }
 
         def _update_h_preview(mode: str):
             src = None
@@ -1336,10 +1499,14 @@ class Interface(QtWidgets.QMainWindow):
                 return
             cam_w, cam_h = _infer_cam_size()
             try:
-                _cell = max(4, int(sp_cell.value()))
+                _cell = max(1, int(sp_cell.value()))
             except Exception:
                 _cell = 16
-            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            try:
+                _pitch = max(_cell, int(sp_pitch.value()))
+            except Exception:
+                _pitch = _cell
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell, pitch=_pitch)
             img = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
             if self._ensure_projection():
                 try:
@@ -1354,6 +1521,19 @@ class Interface(QtWidgets.QMainWindow):
             if cap.shape != grid.shape:
                 try:
                     cap = cv2.resize(cap, (grid.shape[1], grid.shape[0]), interpolation=cv2.INTER_AREA)
+                except Exception:
+                    pass
+            # Crosstalk (report in textbox, not overlay)
+            try:
+                ctk = _compute_crosstalk(cap, _cell, _pitch)
+                if ctk:
+                    metrics_box.appendPlainText(
+                        f"Crosstalk (H): cell={_cell}px, pitch={_pitch}px -> mean={ctk['ratio_mean']*100:.1f}%, "
+                        f"p95={ctk['ratio_p95']*100:.1f}% (N={ctk['samples']})"
+                    )
+            except Exception as _e:
+                try:
+                    metrics_box.appendPlainText(f"Crosstalk (H) error: {_e}")
                 except Exception:
                     pass
             # Threshold to binary masks
@@ -1371,10 +1551,6 @@ class Interface(QtWidgets.QMainWindow):
             vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
             vis[both] = (0, 255, 0)      # green (BGR)
             vis[xor]  = (0, 0, 255)      # red (BGR)
-            try:
-                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
-            except Exception:
-                pass
             try:
                 _h_last_grid['img'] = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
                 _h_last_cap['img']  = cv2.cvtColor(_np.clip(cap, 0, 255).astype(_np.uint8), cv2.COLOR_GRAY2BGR)
@@ -1397,7 +1573,7 @@ class Interface(QtWidgets.QMainWindow):
                 return
             cam_w, cam_h = _infer_cam_size()
             try:
-                pitch = max(4, int(sp_cell.value()))
+                pitch = max(1, int(sp_cell.value()))
             except Exception:
                 pitch = 16
             # Build dot array in camera space
@@ -1443,10 +1619,6 @@ class Interface(QtWidgets.QMainWindow):
             vis = _np.zeros((cam_h, cam_w, 3), _np.uint8)
             vis[both] = (0, 255, 0)
             vis[xor]  = (0, 0, 255)
-            try:
-                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
-            except Exception:
-                pass
             try:
                 _h_last_grid['img'] = cv2.cvtColor(ref, cv2.COLOR_GRAY2BGR)
                 _h_last_cap['img']  = cv2.cvtColor(_np.clip(cap, 0, 255).astype(_np.uint8), cv2.COLOR_GRAY2BGR)
@@ -1548,7 +1720,6 @@ class Interface(QtWidgets.QMainWindow):
                 for (x, y) in proj_xy.astype(_np.int32):
                     if 0 <= x < proj_w and 0 <= y < proj_h:
                         cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 255), -1)
-                cv2.putText(vis, f"Calib RMSE: {rmse:.2f} px", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
                 pm = _to_pix(vis); sl_pix.setPixmap(pm); sl_view.fitInView(sl_pix, Qt.KeepAspectRatio)
             except Exception as e:
                 QMessageBox.critical(dlg, "Calibration Characterization", str(e))
@@ -1566,10 +1737,14 @@ class Interface(QtWidgets.QMainWindow):
             # Build grid with chosen cell
             cam_w, cam_h = _infer_cam_size()
             try:
-                _cell = max(4, int(sp_cell.value()))
+                _cell = max(1, int(sp_cell.value()))
             except Exception:
                 _cell = 16
-            grid = _make_cam_grid(cam_w, cam_h, cell=_cell)
+            try:
+                _pitch = max(_cell, int(sp_pitch.value()))
+            except Exception:
+                _pitch = _cell
+            grid = _make_cam_grid(cam_w, cam_h, cell=_cell, pitch=_pitch)
             grid_rgb = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
             proj_h, proj_w = inv_x.shape
             warped = _prewarp(grid_rgb, inv_x, inv_y, proj_w, proj_h)
@@ -1597,6 +1772,19 @@ class Interface(QtWidgets.QMainWindow):
                     cap = cv2.resize(cap, (cam_w, cam_h), interpolation=cv2.INTER_AREA)
                 except Exception:
                     pass
+            # Crosstalk (report to textbox)
+            try:
+                ctk = _compute_crosstalk(cap, _cell, _pitch)
+                if ctk:
+                    metrics_box.appendPlainText(
+                        f"Crosstalk (LUT): cell={_cell}px, pitch={_pitch}px -> mean={ctk['ratio_mean']*100:.1f}%, "
+                        f"p95={ctk['ratio_p95']*100:.1f}% (N={ctk['samples']})"
+                    )
+            except Exception as _e:
+                try:
+                    metrics_box.appendPlainText(f"Crosstalk (LUT) error: {_e}")
+                except Exception:
+                    pass
             # Build binary masks and overlap vis
             try:
                 _, cap_bin = cv2.threshold(cap, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -1611,10 +1799,6 @@ class Interface(QtWidgets.QMainWindow):
             diff = (cap_bin.astype(_np.int16) - grid_bin.astype(_np.int16)).astype(_np.float32)
             mse = float(_np.mean((diff/255.0)**2)) * (255.0*255.0)
             psnr = 99.0 if mse <= 1e-9 else float(10.0 * _np.log10((255.0*255.0)/mse))
-            try:
-                cv2.putText(vis, f"MSE: {mse:.1f}  PSNR: {psnr:.2f} dB", (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
-            except Exception:
-                pass
             # Update preview with overlap and store ref/cap for view toggles
             try:
                 _h_last_grid['img'] = cv2.cvtColor(grid, cv2.COLOR_GRAY2BGR)
