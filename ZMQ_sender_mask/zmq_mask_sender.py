@@ -171,6 +171,8 @@ def main():
                     help="Path to rois.npz containing 'labels' or 'masks'")
     ap.add_argument("--flip-x", action="store_true", help="Flip frames horizontally before send")
     ap.add_argument("--flip-y", action="store_true", help="Flip frames vertically before send")
+    ap.add_argument("--save-segmask-to", type=str, default="",
+                    help="If pattern=segmask: save the actually presented frame (after flips/prewarp) to this TIFF path")
     args = ap.parse_args()
 
     global W, H
@@ -233,11 +235,25 @@ def main():
             pass
         return img
 
+    saved_presented_once = False
+
     def send_mask(mid, img):
         meta = json.dumps({"id": int(mid)}).encode()
         try:
             img2 = _apply_flips(img)
             frame = _prewarp(img2)
+            # Optionally save the actually presented segmask once
+            nonlocal saved_presented_once
+            if (not saved_presented_once) and args.pattern == "segmask":
+                try:
+                    out_path = args.save_segmask_to.strip() or os.path.join(os.getcwd(), "segmask_presented.tiff")
+                    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                    Image.fromarray(frame.astype(np.uint8)).save(out_path, format="TIFF")
+                    print(f"💾 Saved presented segmask to: {out_path}")
+                except Exception as _e:
+                    print(f"⚠️  Failed saving presented segmask: {_e}")
+                finally:
+                    saved_presented_once = True
             s.send_multipart([meta, frame.tobytes()], flags=zmq.DONTWAIT)
             return True
         except zmq.Again:

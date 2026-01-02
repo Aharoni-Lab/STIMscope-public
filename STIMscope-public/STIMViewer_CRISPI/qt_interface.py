@@ -86,6 +86,15 @@ class Interface(QtWidgets.QMainWindow):
         icon_path = self._findprinto()
         if icon_path:
             self.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        # Contrast/preview defaults: disable software contrast for performance; enable only if explicitly set
+        try:
+            self._soft_contrast_active = False
+            self._has_hw_contrast = False
+            self._contrast_factor = 1.0
+            self._contrast_lut = None
+            self._contrast_lut_factor = 1.0
+        except Exception:
+            pass
     @staticmethod
     def _findprinto():
         candidates = [
@@ -153,7 +162,10 @@ class Interface(QtWidgets.QMainWindow):
         self._gain_label = None
 
         self._gain_slider = None
-
+        # Contrast control defaults
+        self._has_hw_contrast = False
+        self._soft_contrast_active = True
+        self._contrast_factor = 1.0
 
 
 
@@ -2641,7 +2653,15 @@ class Interface(QtWidgets.QMainWindow):
                     # Send latest segmentation labels/masks from rois.npz
                     try:
                         roi_path = str((Path.cwd() / "rois.npz").resolve())
-                        args = ["--pattern", "segmask", "--roi-npz", roi_path]
+                        # Save the actually presented segmask (post flips/prewarp) to CellposeRepo/cellpose_outputs
+                        try:
+                            repo_root = Path(__file__).resolve().parent.parent
+                            save_dir = (repo_root / "CellposeRepo" / "cellpose_outputs")
+                            save_dir.mkdir(parents=True, exist_ok=True)
+                            save_tiff = str((save_dir / "segmask_presented.tiff").resolve())
+                        except Exception:
+                            save_tiff = str((Path.cwd() / "segmask_presented.tiff").resolve())
+                        args = ["--pattern", "segmask", "--roi-npz", roi_path, "--save-segmask-to", save_tiff]
                     except Exception:
                         args = ["--pattern", "segmask", "--roi-npz", "rois.npz"]
                 elif pat == "Custom":
@@ -3746,16 +3766,52 @@ class Interface(QtWidgets.QMainWindow):
             if (arr8.ndim == 2 or (arr8.ndim == 3 and arr8.shape[2] == 1)) and bayer is not None:
                 try:
                     rgb = cv2.cvtColor(arr8 if arr8.ndim == 2 else arr8[:, :, 0], bayer)
-                    qsrc = rgb  
-                    h, w = qsrc.shape[:2]
+                    qsrc = rgb
+                    # Optional software contrast (fallback if camera lacks hardware contrast)
+                    try:
+                        cf = float(getattr(self, "_contrast_factor", 1.0))
+                        apply_sw = bool(getattr(self, "_soft_contrast_active", False))
+                        if apply_sw and abs(cf - 1.0) > 1e-3:
+                            lut = getattr(self, "_contrast_lut", None)
+                            lutf = getattr(self, "_contrast_lut_factor", None)
+                            if lut is None or lutf is None or float(lutf) != float(cf):
+                                lut = self._make_contrast_lut(cf)
+                                self._contrast_lut = lut
+                                self._contrast_lut_factor = cf
+                            if lut is not None:
+                                try:
+                                    cv2.LUT(qsrc, lut, dst=qsrc)
+                                except Exception:
+                                    qsrc = cv2.LUT(qsrc, lut)
+                    except Exception:
+                        pass
                     fmt = QtGui.QImage.Format_RGB888
-                    bpl = int(qsrc.strides[0])  
+                    h, w = qsrc.shape[:2]
+                    bpl = int(qsrc.strides[0])
                     qimg = QtGui.QImage(qsrc.data, w, h, bpl, fmt).copy()
                 except Exception as e:
                     print(f"Demosaic failed ({pf_str}), falling back to grayscale: {e}")
                     qsrc = arr8 if arr8.ndim == 2 else arr8[:, :, 0]
-                    h, w = qsrc.shape[:2]
+                    # Optional software contrast for grayscale
+                    try:
+                        cf = float(getattr(self, "_contrast_factor", 1.0))
+                        apply_sw = bool(getattr(self, "_soft_contrast_active", False))
+                        if apply_sw and abs(cf - 1.0) > 1e-3:
+                            lut = getattr(self, "_contrast_lut", None)
+                            lutf = getattr(self, "_contrast_lut_factor", None)
+                            if lut is None or lutf is None or float(lutf) != float(cf):
+                                lut = self._make_contrast_lut(cf)
+                                self._contrast_lut = lut
+                                self._contrast_lut_factor = cf
+                            if lut is not None:
+                                try:
+                                    cv2.LUT(qsrc, lut, dst=qsrc)
+                                except Exception:
+                                    qsrc = cv2.LUT(qsrc, lut)
+                    except Exception:
+                        pass
                     fmt = QtGui.QImage.Format_Grayscale8
+                    h, w = qsrc.shape[:2]
                     bpl = int(qsrc.strides[0])
                     qimg = QtGui.QImage(qsrc.data, w, h, bpl, fmt).copy()
             else:
@@ -3787,6 +3843,40 @@ class Interface(QtWidgets.QMainWindow):
                     fmt = QtGui.QImage.Format_RGBA8888
                     bpl = int(qsrc.strides[0])
 
+                # Optional software contrast (handles gray, RGB, and preserves alpha)
+                try:
+                    cf = float(getattr(self, "_contrast_factor", 1.0))
+                    apply_sw = bool(getattr(self, "_soft_contrast_active", False))
+                    if apply_sw and abs(cf - 1.0) > 1e-3:
+                        lut = getattr(self, "_contrast_lut", None)
+                        lutf = getattr(self, "_contrast_lut_factor", None)
+                        if lut is None or lutf is None or float(lutf) != float(cf):
+                            lut = self._make_contrast_lut(cf)
+                            self._contrast_lut = lut
+                            self._contrast_lut_factor = cf
+                        if lut is not None:
+                            if qsrc.ndim == 2:
+                                try:
+                                    cv2.LUT(qsrc, lut, dst=qsrc)
+                                except Exception:
+                                    qsrc = cv2.LUT(qsrc, lut)
+                            elif qsrc.ndim == 3 and qsrc.shape[2] == 3:
+                                try:
+                                    cv2.LUT(qsrc, lut, dst=qsrc)
+                                except Exception:
+                                    qsrc = cv2.LUT(qsrc, lut)
+                            elif qsrc.ndim == 3 and qsrc.shape[2] == 4:
+                                rgb = qsrc[:, :, :3]
+                                try:
+                                    cv2.LUT(rgb, lut, dst=rgb)  # in-place on first 3 channels
+                                except Exception:
+                                    rgb2 = cv2.LUT(rgb, lut)
+                                    qsrc[:, :, :3] = rgb2
+                except Exception:
+                    pass
+                # Recompute shape/stride after any adjustment
+                h, w = qsrc.shape[:2]
+                bpl = int(qsrc.strides[0])
                 qimg = QtGui.QImage(qsrc.data, w, h, bpl, fmt).copy()
 
 
@@ -3887,6 +3977,86 @@ class Interface(QtWidgets.QMainWindow):
             pass
         self._camera.set_gain(value)
 
+    def _set_camera_contrast(self, value: float):
+        """Apply contrast to the camera if supported. Tries camera API first, then node map."""
+        try:
+            # Preferred: explicit camera method if available
+            if hasattr(self._camera, "set_contrast"):
+                try:
+                    self._camera.set_contrast(value)
+                    print(f"[CAM] Applied Contrast (method) = {float(value):.4f}")
+                    return
+                except Exception:
+                    pass
+            # Fallback to GenICam node map (Contrast or Gamma)
+            nm = getattr(self._camera, "node_map", None)
+            if nm is None:
+                return
+            node = None
+            used_gamma = False
+            # Try contrast nodes first
+            for name in ("Contrast", "ContrastAbsolute"):
+                try:
+                    node = nm.FindNode(name)
+                    if node is not None:
+                        break
+                except Exception:
+                    node = None
+            # If no contrast nodes, try gamma nodes
+            if node is None:
+                for name in ("Gamma", "GammaCorrection", "GammaValue"):
+                    try:
+                        node = nm.FindNode(name)
+                        if node is not None:
+                            used_gamma = True
+                            # Some cameras require enabling gamma
+                            try:
+                                ge = nm.FindNode("GammaEnable")
+                                if ge is not None:
+                                    try:
+                                        ge.SetValue(True)
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+                            break
+                    except Exception:
+                        node = None
+            if node is None:
+                return
+            # Try float, then int coercion if needed
+            try:
+                v = float(value)
+                # Clamp gamma to a narrow, stable range to avoid large brightness shifts
+                if used_gamma:
+                    try:
+                        v = max(0.7, min(1.3, v))
+                    except Exception:
+                        pass
+                node.SetValue(v)
+            except Exception:
+                try:
+                    v = int(round(value))
+                    node.SetValue(v)
+                except Exception:
+                    return
+            try:
+                print(f"[CAM] Applied Contrast/Gamma (node) = {float(value):.4f}")
+            except Exception:
+                pass
+        except Exception:
+            pass
+    def _make_contrast_lut(self, factor: float):
+        """Build a 256-entry LUT for fast contrast application in preview."""
+        try:
+            import numpy as _np
+            f = float(factor)
+            x = _np.arange(256, dtype=_np.float32)
+            y = (x - 127.5) * f + 127.5
+            return _np.clip(y, 0, 255).astype(_np.uint8)
+        except Exception:
+            return None
+
     def _apply_exposure_from_text(self):
         try:
             txt = self._exp_line.text().strip()
@@ -3973,6 +4143,170 @@ class Interface(QtWidgets.QMainWindow):
                 grid.addWidget(set_btn, 2, 3)
             except Exception:
                 pass
+
+            # Contrast/Gamma control (hardware if available)
+            cnt_label = QtWidgets.QLabel("")
+            cnt_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+            try:
+                # Avoid continuous valueChanged signals while dragging; update on release
+                cnt_slider.setTracking(False)
+            except Exception:
+                pass
+            cnt_val = QtWidgets.QLabel("")
+            # Detect node and range
+            contrast_min, contrast_max, contrast_cur = 0.1, 4.0, 1.0
+            # Predefine node map and node so later checks are safe even if probing fails
+            nm = getattr(self._camera, "node_map", None)
+            node = None
+            node_name = None
+            try:
+                if nm is not None:
+                    # Prefer hardware contrast; fall back to gamma family
+                    for _name in ("Contrast", "ContrastAbsolute", "Gamma", "GammaCorrection", "GammaValue"):
+                        try:
+                            node = nm.FindNode(_name)
+                            if node is not None:
+                                node_name = _name
+                                break
+                        except Exception:
+                            node = None
+                def _try_get(method_names):
+                    for mn in method_names:
+                        try:
+                            f = getattr(node, mn, None)
+                            if callable(f):
+                                v = f()
+                                if v is not None:
+                                    return float(v)
+                        except Exception:
+                            continue
+                    return None
+                if node is not None:
+                    vmin = _try_get(["Minimum", "GetMinimum", "Min", "GetMin", "GetLower", "GetMinValue"])
+                    vmax = _try_get(["Maximum", "GetMaximum", "Max", "GetMax", "GetUpper", "GetMaxValue"])
+                    vcur = None
+                    for gn in ("Value", "GetValue"):
+                        try:
+                            gf = getattr(node, gn, None)
+                            if callable(gf):
+                                gv = gf()
+                                if gv is not None:
+                                    vcur = float(gv)
+                                    break
+                        except Exception:
+                            pass
+                    if vmin is not None and vmax is not None and float(vmax) > float(vmin):
+                        contrast_min, contrast_max = float(vmin), float(vmax)
+                    if vcur is not None:
+                        contrast_cur = float(vcur)
+                    # If using gamma, compress UI range to a stable window around 1.0
+                    try:
+                        if node_name in ("Gamma", "GammaCorrection", "GammaValue"):
+                            contrast_min, contrast_max = 0.7, 1.3
+                            if not (contrast_min <= contrast_cur <= contrast_max):
+                                contrast_cur = 1.0
+                    except Exception:
+                        pass
+                # Optional helpers on camera
+                if hasattr(self._camera, "get_contrast_range"):
+                    try:
+                        rng = self._camera.get_contrast_range()
+                        if isinstance(rng, (tuple, list)) and len(rng) >= 2:
+                            mn, mx = float(rng[0]), float(rng[1])
+                            if mx > mn:
+                                contrast_min, contrast_max = mn, mx
+                    except Exception:
+                        pass
+                if hasattr(self._camera, "get_contrast"):
+                    try:
+                        contrast_cur = float(self._camera.get_contrast())
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            # Decide whether hardware contrast is available; set preview fallback flags
+            try:
+                has_hw = bool(((nm is not None) and (node is not None)) or hasattr(self._camera, "set_contrast"))
+            except Exception:
+                try:
+                    has_hw = bool(hasattr(self._camera, "set_contrast"))
+                except Exception:
+                    has_hw = False
+            try:
+                self._has_hw_contrast = bool(has_hw)
+                # Disable software contrast for performance on Jetson unless explicitly enabled elsewhere
+                self._soft_contrast_active = False
+                self._contrast_factor = float(contrast_cur)
+                # Build initial LUT for current factor (cheap, 256 entries)
+                self._contrast_lut = self._make_contrast_lut(self._contrast_factor)
+                self._contrast_lut_factor = self._contrast_factor
+            except Exception:
+                pass
+            # Label/tooltip according to underlying control
+            try:
+                if node_name in ("Contrast", "ContrastAbsolute"):
+                    cnt_label.setText("Contrast")
+                    cnt_label.setToolTip("Hardware Contrast (camera control). 1.0 is neutral on most cameras.")
+                elif node_name in ("Gamma", "GammaCorrection", "GammaValue"):
+                    cnt_label.setText("Gamma")
+                    cnt_label.setToolTip("Hardware Gamma (brightness curve). 1.0 is neutral; <1 brightens, >1 darkens.")
+                else:
+                    cnt_label.setText("Contrast")
+                    cnt_label.setToolTip("Contrast not exposed by camera; consider a software preview option if needed.")
+            except Exception:
+                pass
+            # Clip current to range
+            try:
+                if not (contrast_min <= contrast_cur <= contrast_max):
+                    contrast_cur = max(contrast_min, min(contrast_cur, contrast_max))
+            except Exception:
+                contrast_cur = 1.0
+            # Slider ticks and mapping
+            ticks = 1000
+            try:
+                cnt_slider.setRange(0, ticks)
+            except Exception:
+                pass
+            def _to_pos(v):
+                try:
+                    return int(round((float(v) - contrast_min) / max(1e-12, (contrast_max - contrast_min)) * ticks))
+                except Exception:
+                    return 0
+            def _to_val(p):
+                try:
+                    frac = float(p) / float(ticks)
+                    return (contrast_min + frac * (contrast_max - contrast_min))
+                except Exception:
+                    return contrast_min
+            try:
+                cnt_slider.setValue(_to_pos(contrast_cur))
+            except Exception:
+                pass
+            try:
+                cnt_val.setText(f"{contrast_cur:.2f}")
+            except Exception:
+                pass
+            def _on_cnt_change(p, _has_hw=has_hw):
+                try:
+                    v = float(_to_val(p))
+                    cnt_val.setText(f"{v:.2f}")
+                    # Store factor (no heavy preview updates here)
+                    self._contrast_factor = float(v)
+                except Exception:
+                    pass
+            try:
+                cnt_slider.valueChanged.connect(_on_cnt_change)
+            except Exception:
+                pass
+            # Apply hardware on slider release only (prevents camera stalls while dragging)
+            try:
+                cnt_slider.sliderReleased.connect(lambda: self._set_camera_contrast(float(getattr(self, "_contrast_factor", 1.0))) if bool(getattr(self, "_has_hw_contrast", False)) else None)
+            except Exception:
+                pass
+
+            grid.addWidget(cnt_label, 3, 0)
+            grid.addWidget(cnt_slider, 3, 1)
+            grid.addWidget(cnt_val, 3, 2)
 
             lay.addLayout(grid)
             btns = QtWidgets.QHBoxLayout()

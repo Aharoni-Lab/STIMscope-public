@@ -12,6 +12,8 @@ if sys.version_info < (3, 8):
 import argparse
 import numpy as np
 import cv2
+from pathlib import Path
+import shutil
 
 
 def _read_stack_tiff_max_projection(path: str) -> np.ndarray:
@@ -99,9 +101,9 @@ def _remap_labels_contiguous(labels: np.ndarray) -> np.ndarray:
 def run_cellpose(clahe_img: np.ndarray,
                  model_path: str = None,
                  size_path: str = None,
-                 diameter: float = 18.0,
-                 flow_threshold: float = 0.5,
-                 cellprob_threshold: float = 0.0) -> np.ndarray:
+                 diameter: float = 5.0,
+                 flow_threshold: float = 0.7,
+                 cellprob_threshold: float = -1.0) -> np.ndarray:
     from cellpose import models
     if model_path and os.path.exists(model_path):
         model = models.CellposeModel(
@@ -150,9 +152,9 @@ def main():
     p.add_argument('--out', required=True, help='Output rois.npz path')
     p.add_argument('--model', default=None, help='Path to custom cellpose model')
     p.add_argument('--size', default=None, help='Path to custom size model .npy')
-    p.add_argument('--diameter', type=float, default=18.0)
+    p.add_argument('--diameter', type=float, default=9.0)
     p.add_argument('--flow-threshold', type=float, default=0.5)
-    p.add_argument('--cellprob-threshold', type=float, default=0.0)
+    p.add_argument('--cellprob-threshold', type=float, default=-1.0)
     args = p.parse_args()
 
     vid_path = args.video
@@ -179,6 +181,58 @@ def main():
 
     save_rois_npz(labels, args.out)
     print(f"✅ Saved ROIs → {args.out}")
+
+    # Also export TIFFs and a copy of rois.npz under CellposeRepo/cellpose_outputs for user visibility
+    try:
+        repo_root = Path(__file__).resolve().parent.parent
+        out_dir = repo_root / "CellposeRepo" / "cellpose_outputs"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        label_tiff = (out_dir / "label_map.tiff")
+        binary_tiff = (out_dir / "binary_mask.tiff")
+        rois_copy = (out_dir / "rois.npz")
+
+        lab = labels.astype(np.int32, copy=False)
+        binary = (lab > 0).astype(np.uint8) * 255
+
+        def _save_tiff(arr, path):
+            try:
+                import tifffile
+                tifffile.imwrite(str(path), arr)
+                return True
+            except Exception:
+                try:
+                    from PIL import Image
+                    Image.fromarray(arr).save(str(path), format="TIFF")
+                    return True
+                except Exception:
+                    try:
+                        # OpenCV can save TIFF on most builds
+                        return bool(cv2.imwrite(str(path), arr))
+                    except Exception:
+                        return False
+
+        ok1 = _save_tiff(lab.astype(np.uint16), label_tiff)
+        ok2 = _save_tiff(binary.astype(np.uint8), binary_tiff)
+        try:
+            shutil.copyfile(args.out, str(rois_copy))
+            ok3 = True
+        except Exception:
+            ok3 = False
+
+        if ok1:
+            print(f"💾 label_map.tiff → {label_tiff}")
+        else:
+            print("⚠️ Failed to save label_map.tiff")
+        if ok2:
+            print(f"💾 binary_mask.tiff → {binary_tiff}")
+        else:
+            print("⚠️ Failed to save binary_mask.tiff")
+        if ok3:
+            print(f"💾 rois.npz copy → {rois_copy}")
+        else:
+            print("⚠️ Failed to copy rois.npz to CellposeRepo outputs")
+    except Exception as e:
+        print(f"⚠️ Post-save exports failed: {e}")
 
 
 if __name__ == '__main__':

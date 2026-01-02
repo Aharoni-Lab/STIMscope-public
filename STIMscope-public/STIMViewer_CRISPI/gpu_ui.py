@@ -379,6 +379,56 @@ class GPU(QtWidgets.QWidget):
                 else:
                     img_gray = cv2.resize(img_gray, (tgt_w, tgt_h), interpolation=cv2.INTER_NEAREST)
 
+                # Save the actually displayed (padded/resized) discovery mask.
+                # Try primary path under CellposeRepo/cellpose_outputs, and fall back to rois dir and CWD.
+                try:
+                    from pathlib import Path
+                    # Prefer tifffile; fall back to PIL or OpenCV if unavailable
+                    def _save_tiff(img_arr, path_str):
+                        try:
+                            import tifffile as _tif
+                            _tif.imwrite(path_str, img_arr.astype(np.uint8))
+                            return True
+                        except Exception:
+                            try:
+                                from PIL import Image as _PIL_Image
+                                _PIL_Image.fromarray(img_arr.astype(np.uint8)).save(path_str, format="TIFF")
+                                return True
+                            except Exception:
+                                try:
+                                    import cv2 as _cv2
+                                    # OpenCV supports TIFF on most builds; write as 8-bit
+                                    return bool(_cv2.imwrite(path_str, img_arr.astype(np.uint8)))
+                                except Exception:
+                                    return False
+
+                    repo_root = Path(__file__).resolve().parent.parent
+                    save_dir = (repo_root / "CellposeRepo" / "cellpose_outputs")
+                    save_dir.mkdir(parents=True, exist_ok=True)
+                    primary_path = str((save_dir / "discover_mask_presented.tiff").resolve())
+                    saved = _save_tiff(img_gray, primary_path)
+                    if not saved:
+                        # Fallback to the directory containing rois.npz (if resolvable)
+                        try:
+                            rois_dir = Path(self.rois_path).resolve().parent
+                        except Exception:
+                            rois_dir = Path.cwd()
+                        fallback1 = str((rois_dir / "discover_mask_presented.tiff").resolve())
+                        saved = _save_tiff(img_gray, fallback1)
+                        if saved:
+                            print(f"💾 Saved discovery presented mask to: {fallback1}")
+                        else:
+                            # Final fallback: current working directory
+                            fallback2 = str((Path.cwd() / "discover_mask_presented.tiff").resolve())
+                            if _save_tiff(img_gray, fallback2):
+                                print(f"💾 Saved discovery presented mask to: {fallback2}")
+                            else:
+                                raise RuntimeError("All save methods failed (tifffile/PIL/OpenCV)")
+                    else:
+                        print(f"💾 Saved discovery presented mask to: {primary_path}")
+                except Exception as _e:
+                    print(f"⚠️ Failed to save discovery presented mask: {_e}")
+
                 if self.proj_display:
                     try:
                         self.proj_display.close()
