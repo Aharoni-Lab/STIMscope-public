@@ -1,0 +1,13 @@
+**/improvenv/
+**/__pycache__/
+*.pyc
+*.egg-info
+Images/
+24.3.0-0
+Miniforge3-Linux-aarch64.sh*
+Miniforge3-Linux-aarch64.sh.1
+build/
+dist/
+*.tar.xz
+cudnn-linux-aarch64-*/
+improv-env/
